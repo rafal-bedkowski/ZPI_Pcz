@@ -134,7 +134,7 @@ public class ArchitectureTests
 
     private static IEnumerable<string> AllProjects() =>
         Directory.EnumerateFiles(RepositoryPaths.Root, "WebStore.*.csproj", SearchOption.AllDirectories)
-            .Where(f => !f.Contains("/node_modules/"));
+            .Where(f => !(OperatingSystem.IsWindows() ? f.Replace('\\', '/') : f).Contains("/node_modules/"));
 
     private static IEnumerable<string> ProjectReferences(string project)
     {

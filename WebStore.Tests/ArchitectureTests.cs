@@ -106,7 +106,8 @@ public class ArchitectureTests
         var pattern = new Regex(@"(Password|Pwd)\s*=\s*[^;""'\s]+|User\s*Id\s*=", RegexOptions.IgnoreCase);
         var offenders = RepositoryPaths.TrackedFiles()
             .Where(f => f.EndsWith(".cs") || f.EndsWith(".json") || f.EndsWith(".csproj") || f.EndsWith(".md"))
-            .Where(f => !f.Contains("ArchitectureTests.cs") && !f.Contains("package-lock.json") && !f.Contains("/Migrations/"))
+            .Where(f => !f.Contains("ArchitectureTests.cs") && !f.Contains("package-lock.json")
+                        && !(OperatingSystem.IsWindows() ? f.Replace('\\', '/') : f).Contains("/Migrations/"))
             .Where(f => pattern.IsMatch(File.ReadAllText(f)))
             .ToList();
 

@@ -51,6 +51,24 @@ Uzgodniony z Liderem na podstawie wymagań sprintu 1:
 - Hasła i ciągi połączenia nie trafiają do repozytorium (user-secrets lub zmienne środowiskowe).
 - Instalacje narzędzi wykonywane są wyłącznie po akceptacji Lidera.
 
+## Środowisko
+
+Praca odbywa się na macOS i Windowsie. Wymagane narzędzia:
+
+- Git,
+- .NET SDK zgodny z `global.json` (10.0.x; `rollForward: latestFeature` dopuszcza nowsze poprawki tej wersji),
+- Node.js (LTS) — **opcjonalny**: potrzebny wyłącznie do pracy nad klientem React (`WebStore.Web/ClientApp`) i do `dotnet publish`; `dotnet build` i `dotnet test` działają bez niego,
+- Docker lub inna instancja SQL Server — opcjonalne, tylko do testów wariantu SQL Server.
+
+Po `git clone` środowisko sprawdza i przygotowuje jedno polecenie w katalogu głównym repozytorium:
+
+- macOS: `./setup.sh`
+- Windows (PowerShell): `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
+
+Skrypt sprawdza narzędzia, a dla brakującego .NET SDK i Node.js pyta o zgodę (`[t/N]`) przed każdą instalacją (Windows: winget, macOS: Homebrew; na macOS instalacja .NET SDK wymaga hasła administratora). Następnie wykonuje `dotnet tool restore`, `dotnet restore`, `dotnet build` i `dotnet test` i wypisuje podsumowanie. Parametr `--check-only` (`-CheckOnly` w PowerShellu) tylko sprawdza narzędzia: niczego nie instaluje, o nic nie pyta i pomija restore, build oraz testy.
+
+Testy wariantu SQL Server są pomijane, dopóki zmienna środowiskowa `WEBSTORE_TEST_SQLSERVER` nie zawiera ciągu połączenia do działającej instancji SQL Server. Ciąg połączenia ustawia się w środowisku, nie w repozytorium.
+
 ## Agenci
 
 | Agent | Plik | Rola |

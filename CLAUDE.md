@@ -24,13 +24,32 @@ sprinty/sprint-NN/
   raport-implementacji.md    wynik pracy programisty
   raport-recenzji.md         wynik pracy recenzenta
 .claude/agents/              definicje agentów (analityk, programista, recenzent)
+WebStore.sln                 solucja aplikacji (kod w katalogu głównym repozytorium)
+global.json                  przypięty .NET SDK i runner testów (Microsoft.Testing.Platform)
+WebStore.Model/              encje (DataModels), bez zależności od providera bazy
+WebStore.DAL/                ApplicationDbContext (EF), konfiguracja providera, migracje
+WebStore.ViewModels/         view modele (VM, nazwy z sufiksem Vm)
+WebStore.Services/           interfejsy (Interfaces), usługi (ConcreteServices), MainProfile AutoMappera
+WebStore.Web/                aplikacja ASP.NET Core serwująca klienta React (ClientApp, Vite)
+WebStore.Tests/              testy jednostkowe xunit.v3
 ```
 
-Kod aplikacji (klient i serwer) — struktura zostanie ustalona z Liderem przy pierwszej implementacji i dopisana w tym pliku.
+Zależności projektów: DAL→Model; ViewModels→Model; Services→Model, DAL, ViewModels; Web→Model, DAL, ViewModels, Services; Tests→Services, Model, DAL.
 
 ## Stos technologiczny
 
-Nie został jeszcze ustalony. Przed pierwszą implementacją programista musi uzgodnić z Liderem technologie klienta, serwera, bazy danych i testów. Uzgodnione decyzje zapisujemy w tej sekcji.
+Uzgodniony z Liderem na podstawie wymagań sprintu 1:
+
+- Serwer: .NET 10 (LTS), C#, jedna wersja platformy dla całej solucji, przypięta w `global.json`.
+- ORM: Entity Framework Core 10.x.
+- Baza danych: SQLite domyślnie; SQL Server jako wariant alternatywny wybierany konfiguracją. Praca odbywa się na macOS i Windowsie.
+- Mapowanie obiektów: AutoMapper 16.x (wariant Community, użytek edukacyjny; bez klucza licencyjnego w logach pojawia się ostrzeżenie o braku licencji, co jest znane i akceptowane).
+- Testy: xunit.v3, baza SQLite in-memory (osobna dla każdego testu).
+- Klient: React 19 (Vite), źródła w `WebStore.Web/ClientApp` (szablon `dotnet new react` nie istnieje w .NET 10). Zwykły `dotnet build` i `dotnet test` nie wymagają Node.js; klient budowany jest przez `dotnet publish` (wymaga Node.js) lub ręcznie `npm run build` w `ClientApp` (wynik w `WebStore.Web/wwwroot`), a praca nad nim przez `npm run dev`.
+- Migracje EF: narzędzie `dotnet-ef` jako lokalne (`dotnet-tools.json`, `dotnet tool restore`); osobne migracje w `WebStore.DAL/Migrations/Sqlite` i `/SqlServer`.
+- Wersje pakietów ustala programista poleceniem `dotnet package search` i wybiera aktualne, nieprzestarzałe wydania stabilne.
+- Hasła i ciągi połączenia nie trafiają do repozytorium (user-secrets lub zmienne środowiskowe).
+- Instalacje narzędzi wykonywane są wyłącznie po akceptacji Lidera.
 
 ## Agenci
 

@@ -92,12 +92,17 @@ else
   info "Node.js nie jest zainstalowany. Jest opcjonalny: potrzebny tylko do klienta React (ClientApp) i dotnet publish; build i testy .NET działają bez niego."
   if [ "$CHECK_ONLY" -eq 0 ]; then
     if ! has brew; then
-      info "Brak Homebrew (https://brew.sh); instalacja Node.js: brew install node"
-    elif confirm "Zainstalować Node.js (LTS) przez Homebrew (brew install node)?"; then
-      brew install node
+      info "Brak Homebrew (https://brew.sh); instalacja Node.js: brew install node@22"
+    elif confirm "Zainstalować Node.js 22 LTS przez Homebrew (brew install node@22)?"; then
+      brew install node@22
+      # node@22 jest keg-only (brew nie linkuje go do PATH); bez zmiany plików
+      # konfiguracyjnych użytkownika dodajemy jego katalog do PATH tylko na czas działania skryptu.
+      node_bin="$(brew --prefix node@22)/bin"
+      export PATH="$node_bin:$PATH"
       hash -r
       if has node; then
         ok "Node.js: $(node --version) (zainstalowano)"
+        info "node@22 jest keg-only. Aby node działał w nowych terminalach, dodaj do ~/.zshrc: export PATH=\"$node_bin:\$PATH\""
       else
         info "Node.js: instalacja nie powiodła się; sprawdź komunikat Homebrew"
       fi

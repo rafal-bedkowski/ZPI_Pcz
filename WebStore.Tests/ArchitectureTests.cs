@@ -82,6 +82,17 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void US_01_01_WebProject_RunsNpmOnlyDuringPublish()
+    {
+        var csproj = File.ReadAllText(Path.Combine(RepositoryPaths.Root, "WebStore.Web", "WebStore.Web.csproj"));
+        var npmTargets = System.Text.RegularExpressions.Regex.Matches(csproj, "<Target [^>]*>(?:(?!</Target>).)*npm(?:(?!</Target>).)*</Target>",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        Assert.NotEmpty(npmTargets);
+        Assert.All(npmTargets, t => Assert.Contains("BeforeTargets=\"ComputeFilesToPublish\"", t.Value));
+    }
+
+    [Fact]
     public void US_01_06_ModelServicesViewModels_DoNotReferenceDatabaseProviders()
     {
         foreach (var assembly in new[] { Model, Services, ViewModels })

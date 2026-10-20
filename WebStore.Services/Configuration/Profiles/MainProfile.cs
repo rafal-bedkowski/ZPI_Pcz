@@ -12,6 +12,8 @@ public class MainProfile : Profile
             .ForMember(d => d.Quantity, o => o.MapFrom(s => s.ProductStocks.Sum(ps => ps.Quantity)));
         CreateMap<AddOrUpdateProductVm, Product>()
             .ForMember(d => d.Id, o => o.Ignore())
+            // Brak obrazu w modelu wejściowym oznacza "bez zmian", nie "usuń".
+            .ForMember(d => d.ImageBytes, o => o.Condition(s => s.ImageBytes != null))
             .ForMember(d => d.Category, o => o.Ignore())
             .ForMember(d => d.Supplier, o => o.Ignore())
             .ForMember(d => d.ProductStocks, o => o.Ignore());
@@ -36,6 +38,7 @@ public class MainProfile : Profile
         CreateMap<Invoice, InvoiceVm>();
         CreateMap<AddOrUpdateInvoiceVm, Invoice>()
             .ForMember(d => d.Id, o => o.Ignore())
+            .ForMember(d => d.TotalAmount, o => o.Ignore())
             .ForMember(d => d.Order, o => o.Ignore());
     }
 }

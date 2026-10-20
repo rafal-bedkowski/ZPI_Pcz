@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using WebStore.DAL.EF;
 using WebStore.Services.ConcreteServices;
@@ -111,10 +112,42 @@ public class OrderServiceTests
     public void US_01_11_UnknownCustomerOrProduct_FailsAndSavesNothing()
     {
         Assert.Throws<KeyNotFoundException>(() => _service.AddOrUpdateOrder(NewOrder(null, 999, (TestData.MonitorId, 1))));
-        Assert.Throws<KeyNotFoundException>(() => _service.AddOrUpdateOrder(NewOrder(null, TestData.CustomerId, (999, 1))));
 
         Assert.Empty(_db.Orders);
         Assert.Empty(_db.OrderProducts);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void US_01_11_NonPositiveQuantity_IsRejectedWithValidationErrorAndNothingSaved(int quantity)
+    {
+        Assert.Throws<ValidationException>(() => _service.AddOrUpdateOrder(NewOrder(null, TestData.CustomerId, (TestData.MonitorId, quantity))));
+
+        Assert.True(_logger.HasError<ValidationException>());
+        Assert.Empty(_db.Orders);
+        Assert.Empty(_db.OrderProducts);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(999)]
+    public void US_01_11_InvalidOrUnknownProduct_IsRejectedWithValidationErrorAndNothingSaved(int productId)
+    {
+        Assert.Throws<ValidationException>(() => _service.AddOrUpdateOrder(NewOrder(null, TestData.CustomerId, (productId, 1))));
+
+        Assert.Empty(_db.Orders);
+        Assert.Empty(_db.OrderProducts);
+        Assert.Empty(_db.ChangeTracker.Entries<Model.DataModels.Order>());
+    }
+
+    [Fact]
+    public void US_01_11_EmptyItemList_IsRejectedWithValidationErrorAndNothingSaved()
+    {
+        Assert.Throws<ValidationException>(() => _service.AddOrUpdateOrder(NewOrder(null, TestData.CustomerId)));
+
+        Assert.Empty(_db.Orders);
     }
 
     [Fact]

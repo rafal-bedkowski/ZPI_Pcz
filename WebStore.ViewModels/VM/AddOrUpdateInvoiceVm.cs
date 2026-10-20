@@ -11,6 +11,5 @@ public class AddOrUpdateInvoiceVm
 
     public DateTime IssueDate { get; set; }
     public DateTime PaymentDueDate { get; set; }
-    public decimal TotalAmount { get; set; }
     public int OrderId { get; set; }
 }

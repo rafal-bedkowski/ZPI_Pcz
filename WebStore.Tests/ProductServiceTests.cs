@@ -83,6 +83,33 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public void US_01_09_AddOrUpdateProduct_NullImage_KeepsExistingImage()
+    {
+        var image = new byte[] { 1, 2, 3 };
+        _db.Products.Single(p => p.Id == 1).ImageBytes = image;
+        _db.SaveChanges();
+        _db.ChangeTracker.Clear();
+
+        var update = NewProduct(1, "Monitor Dell 32", 1500m);
+        update.ImageBytes = null;
+        var result = _service.AddOrUpdateProduct(update);
+        _db.ChangeTracker.Clear();
+
+        Assert.Equal(1500m, result.Price);
+        Assert.Equal(image, result.ImageBytes);
+        Assert.Equal(image, _db.Products.Single(p => p.Id == 1).ImageBytes);
+    }
+
+    [Fact]
+    public void US_01_09_AddOrUpdateProduct_NewImage_ReplacesExistingImage()
+    {
+        var update = NewProduct(1, "Monitor Dell 32", 1000m);
+        update.ImageBytes = new byte[] { 9 };
+
+        Assert.Equal(new byte[] { 9 }, _service.AddOrUpdateProduct(update).ImageBytes);
+    }
+
+    [Fact]
     public void US_01_09_AddOrUpdateProduct_UnknownId_ThrowsNotFoundLogsAndAddsNothing()
     {
         var before = _db.Products.Count();

@@ -31,7 +31,8 @@ Uwagi ogólne:
 3. **Zakładając, że** zainstalowane jest .NET SDK, **gdy** w katalogu solucji zostanie wykonane `dotnet build`, **wtedy** kompilacja kończy się sukcesem z 0 błędów i 0 ostrzeżeń.
 4. **Zakładając, że** kompilacja się powiodła, **gdy** zostanie wykonane `dotnet run --project WebStore.Web`, **wtedy** aplikacja startuje bez wyjątku i odpowiada na żądanie HTTP do strony głównej kodem 200.
 5. **Zakładając, że** wszystkie projekty istnieją, **gdy** sprawdzone zostaną pliki `*.csproj`, **wtedy** wszystkie projekty (w tym `WebStore.Tests`) mają tę samą docelową wersję platformy .NET, a użyte pakiety (EF Core, AutoMapper, Identity, framework testowy) są w aktualnych stabilnych wersjach zgodnych z tą platformą (żaden pakiet nie jest oznaczony jako przestarzały).
-6. **Zakładając, że** w projekcie Web brakuje katalogu `node_modules` w konfiguracji Debug, **gdy** zostanie wykonane `dotnet build` bez zainstalowanego Node.js, **wtedy** build kończy się błędem z komunikatem o wymaganym Node.js (zachowanie z instrukcji).
+6. **Zakładając, że** na komputerze nie ma Node.js, **gdy** zostanie wykonane `dotnet build` lub `dotnet test`, **wtedy** polecenie kończy się sukcesem, nie wymaga Node.js i nie uruchamia npm. Klient React jest budowany podczas `dotnet publish` (wymaga Node.js; bez niego publikacja kończy się czytelnym komunikatem o wymaganym Node.js) albo ręcznie poleceniem `npm run build`; praca nad klientem odbywa się poleceniem `npm run dev`.
+   Jeżeli klient React nie jest zbudowany, aplikacja odpowiada na żądanie strony głównej kodem HTTP 200 z krótką instrukcją budowy klienta, a przy starcie nie loguje ostrzeżenia o braku `WebRootPath`.
 7. **Zakładając, że** repozytorium jest sklonowane, **gdy** zostanie sprawdzony katalog główny solucji, **wtedy** istnieje w nim plik `global.json` przypinający wersję .NET SDK zgodną z docelową platformą solucji.
 8. **Zakładając, że** projekt Web uruchamia się, **gdy** zostanie sprawdzona jego konfiguracja, **wtedy** usługi z tego sprintu (`IProductService`, `IOrderService`, `IInvoiceService`, `IStoreService`, `IAddressService`) są zarejestrowane w kontenerze zależności i dają się rozwiązać; projekt nie zawiera kontrolerów API ani konfiguracji Swagger.
 
@@ -95,6 +96,7 @@ Uwagi ogólne:
 4. **Zakładając, że** zamówienie ma pozycje, **gdy** odczytane zostanie `TotalAmount`, **wtedy** jest ono równe sumie (zamrożona cena jednostkowa × ilość) wszystkich pozycji zamówienia.
 5. **Zakładając, że** zamówienie ma pozycje o cenach z częścią ułamkową (np. 19,99 × 3 oraz 0,01 × 7), **gdy** zostanie wyznaczone `TotalAmount` i zamówienie zostanie zapisane oraz odczytane z bazy, **wtedy** wartość jest dokładna do 2 miejsc po przecinku (bez błędów zaokrągleń typu double), na każdym z providerów bazy (SQLite i SQL Server).
 6. **Zakładając, że** zamówienie zostało złożone z produktem o cenie 100, **gdy** cena produktu zostanie następnie zmieniona na 200, **wtedy** cena w pozycji zamówienia i `TotalAmount` zamówienia pozostają bez zmian.
+7. **Zakładając, że** faktura jest powiązana z zamówieniem, **gdy** faktura zostanie zapisana, **wtedy** jej `TotalAmount` jest wyliczane z zamówienia przy tym zapisie (równe `TotalAmount` zamówienia), a nie wprowadzone ręcznie; zmiana zamówienia nie aktualizuje faktury bez ponownego zapisu faktury.
 
 ---
 
@@ -203,7 +205,7 @@ Wariant (b) — SQL Server (alternatywny):
 
 **Kryteria akceptacji:**
 1. **Zakładając, że** `IProductService` istnieje, **gdy** zostanie sprawdzony, **wtedy** deklaruje `AddOrUpdateProduct(AddOrUpdateProductVm)` zwracającą `ProductVm`, `GetProduct(Expression<Func<Product,bool>>)` zwracającą `ProductVm` oraz `GetProducts(Expression<Func<Product,bool>>? = null)` zwracającą `IEnumerable<ProductVm>`.
-2. **Zakładając, że** view modele istnieją, **gdy** zostaną sprawdzone, **wtedy** `AddOrUpdateProductVm` zawiera `Id` (int?), `Description`, `ImageBytes`, `Name`, `Price`, `Weight`, `CategoryId`, `SupplierId`, a `ProductVm` zawiera `Description`, `ImageBytes`, `Name`, `Price`, `Weight`, `Quantity`.
+2. **Zakładając, że** view modele istnieją, **gdy** zostaną sprawdzone, **wtedy** `AddOrUpdateProductVm` zawiera `Id` (int?), `Description`, `ImageBytes` (opcjonalne przy aktualizacji, pkt 12), `Name`, `Price`, `Weight`, `CategoryId`, `SupplierId`, a `ProductVm` zawiera `Description`, `ImageBytes`, `Name`, `Price`, `Weight`, `Quantity`.
 3. **Zakładając, że** `Id` w `AddOrUpdateProductVm` jest puste lub równe 0, **gdy** zostanie wywołane `AddOrUpdateProduct` z poprawnymi danymi, **wtedy** produkt jest dodany do bazy jako nowy rekord i zwrócony `ProductVm` ma te same wartości `Name` i `Price`.
 4. **Zakładając, że** istnieje produkt o `Id` = 1, **gdy** zostanie wywołane `AddOrUpdateProduct` z `Id` = 1 i `Price` = 2000, **wtedy** produkt jest zmodyfikowany (nie powstaje nowy), a zwrócony `Price` = 2000.
 5. **Zakładając, że** nie istnieje produkt o `Id` = 999, **gdy** zostanie wywołane `AddOrUpdateProduct` z `Id` = 999, **wtedy** rzucany jest wyjątek „nie znaleziono”, błąd jest zapisany w logu i w bazie nie przybywa rekordów.
@@ -213,6 +215,7 @@ Wariant (b) — SQL Server (alternatywny):
 9. **Zakładając, że** w bazie są dwa produkty o `Id` 1 i 2, **gdy** zostanie wywołane `GetProducts(p => p.Id >= 1 && p.Id <= 2)`, **wtedy** zwrócone są dokładnie 2 elementy; wywołanie `GetProducts()` bez filtra zwraca wszystkie produkty (liczba równa liczbie produktów w bazie).
 10. **Zakładając, że** w bazie nie ma produktu spełniającego filtr, **gdy** zostanie wywołane `GetProduct`, **wtedy** zwracany jest `null`.
 11. **Zakładając, że** w bazie są produkty „Monitor Dell 32” (1000) i „Mysz Logitech” (500), **gdy** zostanie wywołane `GetProducts(p => p.Price > 600)` oraz `GetProducts(p => p.Price <= 500)`, **wtedy** zwracane są odpowiednio tylko monitor i tylko mysz, na każdym providerze bazy (SQLite i SQL Server).
+12. **Zakładając, że** istnieje produkt z zapisanym obrazem, **gdy** zostanie wywołane `AddOrUpdateProduct` z jego `Id` i `ImageBytes` = `null`, **wtedy** produkt jest zaktualizowany, a jego dotychczasowy obraz pozostaje w bazie bez zmian.
 
 **Uwagi:** Zależy od US-01-08.
 
@@ -258,10 +261,13 @@ Wariant (b) — SQL Server (alternatywny):
 2. **Zakładając, że** w bazie istnieje klient i produkty, **gdy** zostanie zapisane zamówienie z poprawnymi pozycjami, **wtedy** zamówienie jest utrwalone wraz z pozycjami, w każdej pozycji zapisana jest aktualna cena produktu jako cena zamrożona, a zwrócony view model zawiera dane zamówienia.
 3. **Zakładając, że** istnieje zamówienie, **gdy** zostanie pobrane po filtrze lub w postaci listy, **wtedy** zwracane są view modele zgodne z filtrem; brak filtra zwraca wszystkie; brak dopasowania zwraca `null` (dla pobrania jednego).
 4. **Zakładając, że** argument lub filtr jest `null`, **gdy** zostanie wywołana odpowiednia metoda, **wtedy** rzucany jest `ArgumentNullException` i błąd trafia do loga.
-5. **Zakładając, że** zamówienie wskazuje nieistniejącego klienta lub produkt, **gdy** zostanie zapisane, **wtedy** operacja kończy się błędem i nic nie jest zapisane.
-6. **Zakładając, że** zapis zamówienia ma `Id` wskazujące nieistniejące zamówienie, **gdy** zostanie wywołany, **wtedy** rzucany jest wyjątek „nie znaleziono”.
-7. **Zakładając, że** zamówienie ma pozycje z cenami ułamkowymi, **gdy** zostanie zapisane i pobrane, **wtedy** `TotalAmount` w view modelu jest dokładną sumą (cena zamrożona × ilość) pozycji (US-01-04 pkt 4 i 5), na każdym providerze bazy.
-8. **Zakładając, że** usługa jest zaimplementowana, **gdy** uruchomione zostaną testy jednostkowe `OrderService`, **wtedy** obejmują scenariusze z pkt 2–7 i wszystkie przechodzą.
+5. **Zakładając, że** zamówienie wskazuje nieistniejącego klienta, **gdy** zostanie zapisane, **wtedy** operacja kończy się błędem i nic nie jest zapisane.
+6. **Zakładając, że** pozycja zamówienia ma `Quantity` mniejsze lub równe 0, **gdy** zamówienie zostanie zapisane, **wtedy** jest odrzucane błędem walidacji i nic nie jest zapisane.
+7. **Zakładając, że** pozycja zamówienia ma `ProductId` mniejsze lub równe 0 albo wskazujące nieistniejący produkt, **gdy** zamówienie zostanie zapisane, **wtedy** jest odrzucane czytelnym błędem walidacji (nie niezwiązanym wyjątkiem bazy) i nic nie jest zapisane.
+8. **Zakładając, że** zamówienie ma pustą listę pozycji, **gdy** zostanie zapisane, **wtedy** jest odrzucane błędem walidacji i nic nie jest zapisane.
+9. **Zakładając, że** zapis zamówienia ma `Id` wskazujące nieistniejące zamówienie, **gdy** zostanie wywołany, **wtedy** rzucany jest wyjątek „nie znaleziono”.
+10. **Zakładając, że** zamówienie ma pozycje z cenami ułamkowymi, **gdy** zostanie zapisane i pobrane, **wtedy** `TotalAmount` w view modelu jest dokładną sumą (cena zamrożona × ilość) pozycji (US-01-04 pkt 4 i 5), na każdym providerze bazy.
+11. **Zakładając, że** usługa jest zaimplementowana, **gdy** uruchomione zostaną testy jednostkowe `OrderService`, **wtedy** obejmują scenariusze z pkt 2–10 i wszystkie przechodzą.
 
 **Uwagi:** Zakres: zapis lub aktualizacja, pobranie jednego, lista z filtrem oraz wyliczenie `TotalAmount`. `OrderService` może korzystać z `ProductService`.
 
@@ -285,7 +291,8 @@ Wariant (b) — SQL Server (alternatywny):
 5. **Zakładając, że** argument lub filtr jest `null`, **gdy** zostanie wywołana odpowiednia metoda, **wtedy** rzucany jest `ArgumentNullException` i błąd trafia do loga.
 6. **Zakładając, że** faktura wskazuje nieistniejące zamówienie, **gdy** zostanie zapisana, **wtedy** operacja kończy się błędem.
 7. **Zakładając, że** zapis faktury ma `Id` wskazujące nieistniejącą fakturę, **gdy** zostanie wywołany, **wtedy** rzucany jest wyjątek „nie znaleziono”.
-8. **Zakładając, że** usługa jest zaimplementowana, **gdy** uruchomione zostaną testy jednostkowe `InvoiceService`, **wtedy** obejmują scenariusze z pkt 2–7 i przechodzą.
+8. **Zakładając, że** zapisywana jest faktura dla zamówienia o `TotalAmount` = 119,97, **gdy** zostanie wywołany zapis z modelu wejściowego `AddOrUpdateInvoiceVm`, **wtedy** model ten nie zawiera pola `TotalAmount` (wywołujący nie może go podać), a zapisana faktura ma `TotalAmount` = 119,97 wyliczone z zamówienia; po zmianie pozycji zamówienia i ponownym zapisie faktury `TotalAmount` faktury odpowiada nowej wartości zamówienia.
+9. **Zakładając, że** usługa jest zaimplementowana, **gdy** uruchomione zostaną testy jednostkowe `InvoiceService`, **wtedy** obejmują scenariusze z pkt 2–8 i przechodzą.
 
 **Uwagi:** Zakres: zapis lub aktualizacja, pobranie jednego, lista z filtrem.
 

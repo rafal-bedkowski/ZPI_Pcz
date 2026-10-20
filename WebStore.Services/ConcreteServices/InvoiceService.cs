@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using WebStore.DAL.EF;
 using WebStore.Model.DataModels;
@@ -26,10 +27,8 @@ public class InvoiceService : BaseService, IInvoiceService
                        ?? throw NotFound(nameof(Invoice), model.Id.Value);
         }
 
-        if (!DbContext.Orders.Any(o => o.Id == model.OrderId))
-        {
-            throw NotFound(nameof(Order), model.OrderId);
-        }
+        var order = DbContext.Orders.Include(o => o.OrderProducts).FirstOrDefault(o => o.Id == model.OrderId)
+                    ?? throw NotFound(nameof(Order), model.OrderId);
 
         // Zamówienie ma co najwyżej jedną fakturę (relacja 1:1).
         if (DbContext.Invoices.Any(i => i.OrderId == model.OrderId && i.Id != (existing != null ? existing.Id : 0)))
@@ -48,6 +47,9 @@ public class InvoiceService : BaseService, IInvoiceService
             invoice = existing;
             Mapper.Map(model, invoice);
         }
+
+        // Kwota faktury zawsze pochodzi z zamówienia, wywołujący nie może jej podać.
+        invoice.TotalAmount = order.TotalAmount;
 
         DbContext.SaveChanges();
         return Mapper.Map<InvoiceVm>(invoice);

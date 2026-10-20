@@ -33,7 +33,7 @@ public class InvoiceServiceTests
     private static AddOrUpdateInvoiceVm NewInvoice(int orderId, int? id = null, string number = "FV/1") => new()
     {
         Id = id, InvoiceNumber = number, IssueDate = new DateTime(2025, 1, 10),
-        PaymentDueDate = new DateTime(2025, 1, 24), TotalAmount = 1000m, OrderId = orderId
+        PaymentDueDate = new DateTime(2025, 1, 24), OrderId = orderId
     };
 
     [Fact]
@@ -54,6 +54,28 @@ public class InvoiceServiceTests
 
         Assert.Equal(orderId, result.OrderId);
         Assert.Equal(result.Id, _db.Orders.Include(o => o.Invoice).Single(o => o.Id == orderId).Invoice!.Id);
+    }
+
+    [Fact]
+    public void US_01_12_InvoiceTotalAmount_IsComputedFromOrderAndRefreshedAfterOrderChange()
+    {
+        Assert.DoesNotContain(typeof(AddOrUpdateInvoiceVm).GetProperties(), p => p.Name == "TotalAmount");
+
+        var order = new Order { CustomerId = TestData.CustomerId, OrderDate = DateTime.Today, DeliveryDate = DateTime.Today };
+        order.OrderProducts.Add(new OrderProduct { ProductId = TestData.MonitorId, Quantity = 3, UnitPrice = 39.99m });
+        _db.Orders.Add(order);
+        _db.SaveChanges();
+
+        var created = _service.AddOrUpdateInvoice(NewInvoice(order.Id));
+        Assert.Equal(119.97m, created.TotalAmount);
+        Assert.Equal(119.97m, _db.Invoices.Single().TotalAmount);
+
+        order.OrderProducts.Single().Quantity = 4;
+        _db.SaveChanges();
+        var updated = _service.AddOrUpdateInvoice(NewInvoice(order.Id, created.Id));
+
+        Assert.Equal(159.96m, updated.TotalAmount);
+        Assert.Equal(159.96m, _db.Invoices.Single().TotalAmount);
     }
 
     [Fact]

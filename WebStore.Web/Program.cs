@@ -8,11 +8,16 @@ builder.Services.AddWebStoreServices();
 
 var app = builder.Build();
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
+// Bez katalogu wwwroot (klient nie jest zbudowany) middleware plików statycznych logowałby ostrzeżenie o braku WebRootPath.
+var clientBuilt = File.Exists(Path.Combine(app.Environment.ContentRootPath, "wwwroot", "index.html"));
+if (clientBuilt)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
 
-// Bez zbudowanego klienta (wwwroot/index.html) strona główna wyjaśnia, jak go zbudować.
-if (app.Environment.WebRootFileProvider.GetFileInfo("index.html").Exists)
+// Bez zbudowanego klienta strona główna wyjaśnia, jak go zbudować.
+if (clientBuilt)
 {
     app.MapFallbackToFile("index.html");
 }

@@ -2,7 +2,7 @@
 
 ## 1. Zakres i mapowanie kryteriów akceptacji na testy
 
-Zaimplementowano US-01-01 do US-01-14; wszystkie mają status „Zaimplementowana”. Otwarte pozostaje jedno pytanie (pkt 6).
+Zaimplementowano US-01-01 do US-01-14. Po poprawkach wynikających z recenzji status „Zaimplementowana” mają US-01-01, US-01-04, US-01-09, US-01-11 i US-01-12; pozostałe stories zachowują status „Zweryfikowana”. Testy i migracje SQL Server są wstrzymane do zajęć (pkt 6).
 
 Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M” oznacza weryfikację ręczną opisaną w pkt 4.
 
@@ -10,7 +10,7 @@ Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M”
 |---|---|---|
 | US-01-01 | 1, 2, 5, 7 | `ArchitectureTests`: `US_01_01_Solution_ContainsAllProjects`, `US_01_01_ProjectReferences_MatchLayering`, `US_01_01_CsprojFiles_ReferenceExpectedProjects`, `US_01_01_AllProjects_ShareTheSameTargetFramework`, `US_01_01_GlobalJson_PinsSdkMatchingTargetFramework` |
 | | 3, 4 | M: `dotnet build` (0 błędów, 0 ostrzeżeń), `dotnet run` → HTTP 200 |
-| | 6 | Zmienione decyzją Lidera: build i testy nie wymagają Node.js; brak Node.js przerywa dopiero `dotnet publish` z komunikatem o wymaganym Node.js (M) |
+| | 6 | `ArchitectureTests.US_01_01_WebProject_RunsNpmOnlyDuringPublish`; M: `dotnet build` i `dotnet test` z PATH bez Node.js przechodzą, `dotnet publish` bez Node.js kończy się komunikatem o wymaganym Node.js; bez zbudowanego klienta `/` zwraca 200 z instrukcją i w logu startu nie ma ostrzeżenia o `WebRootPath` |
 | | 8 | `ConfigurationTests.US_01_01_AllSprintServices_AreRegisteredAndResolvable`, `ArchitectureTests.US_01_01_WebProject_HasNoApiControllersNorSwagger` |
 | US-01-02 | 1–6 | `ModelTests.US_01_02_*` (6 testów), niepodzielność adresów: `DbContextTests.US_01_06_SharingAnAddressBetweenCustomers_IsRejected` |
 | US-01-03 | 1–3 | `ModelTests.US_01_03_*` |
@@ -18,6 +18,7 @@ Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M”
 | | 4 | `ModelTests.US_01_04_TotalAmount_IsSumOfFrozenUnitPriceTimesQuantity` |
 | | 5 | `DbContextTests.US_01_04_OrderWithFractionalPrices_KeepsExactTotalAfterRoundTrip` (SQLite); `SqlServerProviderTests.US_01_10_SqlServer_TotalAmountIsExactAfterRoundTrip` (SQL Server, pomijany bez instancji) |
 | | 6 | `OrderServiceTests.US_01_11_ProductPriceChange_DoesNotAffectExistingOrder` |
+| | 7 | `InvoiceServiceTests.US_01_12_InvoiceTotalAmount_IsComputedFromOrderAndRefreshedAfterOrderChange` |
 | US-01-05 | 1 | `ModelTests.US_01_05_StationaryStore_HasExactlyTheRequiredFields` |
 | US-01-06 | 1–5 | `DbContextTests.US_01_06_*` (kontekst, relacje 1:N, dwa adresy klienta, 1:1, klucz złożony, TPH) |
 | | 6 | `DbContextTests.US_01_06_ProductWithMissingCategoryOrSupplier_ViolatesForeignKey` (SQLite), `SqlServerProviderTests.US_01_10_SqlServer_MissingForeignKeyIsRejected` (SQL Server, pomijany) |
@@ -32,12 +33,16 @@ Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M”
 | | 11 | `MigrationTests.US_01_07_SqlServerMigrations_ExistAndAreUpToDateWithModel`; M: kolejna migracja jest pusta |
 | US-01-08 | 1–7 | `ConventionTests.US_01_08_*` |
 | US-01-09 | 1–11 | `ProductServiceTests.US_01_09_*` |
+| | 12 | `ProductServiceTests.US_01_09_AddOrUpdateProduct_NullImage_KeepsExistingImage`, `US_01_09_AddOrUpdateProduct_NewImage_ReplacesExistingImage` |
 | US-01-10 | 1, 2 | `ArchitectureTests.US_01_10_TestProject_UsesXunitV3`, `Startup.cs` |
 | | 3, 6, 7, 8 | `SeedDataTests.US_01_10_*` (dane startowe, wymuszanie kluczy obcych, izolacja per test), asercje liczby w `ProductServiceTests`, `OrderServiceTests` |
 | | 4, 5 | M: `dotnet test` (kod wyjścia 0), `dotnet test --filter-class` |
 | | 9 | `SqlServerProviderTests` (uruchamiane po ustawieniu `WEBSTORE_TEST_SQLSERVER`; niezweryfikowane w tym środowisku) |
-| US-01-11 | 1–8 | `OrderServiceTests.US_01_11_*` (pkt 7 także `US_01_11_TotalAmount_FractionalPrices_IsExactAfterSaveAndLoad`) |
-| US-01-12 | 1–8 | `InvoiceServiceTests.US_01_12_*` |
+| US-01-11 | 1–5, 9–11 | `OrderServiceTests.US_01_11_*` (pkt 10 także `US_01_11_TotalAmount_FractionalPrices_IsExactAfterSaveAndLoad`) |
+| | 6 | `US_01_11_NonPositiveQuantity_IsRejectedWithValidationErrorAndNothingSaved` |
+| | 7 | `US_01_11_InvalidOrUnknownProduct_IsRejectedWithValidationErrorAndNothingSaved` |
+| | 8 | `US_01_11_EmptyItemList_IsRejectedWithValidationErrorAndNothingSaved` |
+| US-01-12 | 1–9 | `InvoiceServiceTests.US_01_12_*` (pkt 8: `US_01_12_InvoiceTotalAmount_IsComputedFromOrderAndRefreshedAfterOrderChange`) |
 | US-01-13 | 1–6 | `StoreServiceTests.US_01_13_*` |
 | US-01-14 | 1–7 | `AddressServiceTests.US_01_14_*` |
 
@@ -74,7 +79,7 @@ PATH musi zawierać `dotnet` (`/usr/local/share/dotnet` lub `/opt/homebrew/bin`)
 
 ## 4. Wynik testów i weryfikacji
 
-- `dotnet test`: 103 testy, 100 zaliczonych, 0 niezaliczonych, 3 pominięte (`SqlServerProviderTests` — brak instancji SQL Server). Kod wyjścia 0.
+- `dotnet test`: 113 testów, 110 zaliczonych, 0 niezaliczonych, 3 pominięte (`SqlServerProviderTests` — brak instancji SQL Server). Kod wyjścia 0.
 - `dotnet build --no-incremental`: 0 błędów, 0 ostrzeżeń.
 - `dotnet list package --deprecated --vulnerable`: brak przestarzałych i podatnych pakietów.
 - `dotnet run --project WebStore.Web`: strona główna zwraca HTTP 200.
@@ -94,7 +99,7 @@ Decyzje:
 3. **Dwa konteksty pod migracje.** `SqliteDbContext` i `SqlServerDbContext` dziedziczą po `ApplicationDbContext`, aby migracje obu providerów nie mieszały się w jednym zestawie. Usługi i testy używają `ApplicationDbContext`.
 4. **Adresy klienta.** Unikalne indeksy na `BillingAddressId` i `ShippingAddressId` zapewniają, że rekord adresu nie jest współdzielony.
 5. **Pozycje zamówienia.** Przy aktualizacji zamówienia istniejąca pozycja zachowuje zamrożoną cenę, nowa dostaje aktualną cenę produktu.
-6. **Faktura.** `TotalAmount` faktury pochodzi z view modelu (nie jest wyliczane z zamówienia); drugi zapis faktury dla zamówienia kończy się `InvalidOperationException`. Brak zamówienia/klienta/produktu/adresu daje `KeyNotFoundException`.
+6. **Faktura i walidacja zamówień.** `AddOrUpdateInvoiceVm` nie ma `TotalAmount`; usługa zawsze ustawia kwotę faktury na `TotalAmount` zamówienia (także przy ponownym zapisie). Drugi zapis faktury dla zamówienia kończy się `InvalidOperationException`; brak zamówienia/klienta/adresu daje `KeyNotFoundException`. `OrderService` odrzuca `ValidationException` (przed jakimkolwiek zapisem): pustą listę pozycji, `Quantity <= 0`, `ProductId <= 0` oraz nieistniejące produkty. Aktualizacja produktu z `ImageBytes = null` zachowuje istniejący obraz (`ImageBytes` w `MainProfile` mapowane warunkowo).
 7. **Dodatki ponad listę pól.** `Product.ProductStocks`, `Category.Products` (nawigacje konieczne dla relacji), `ProductVm.Id`, `OrderVm.InvoiceId`, `StoreVm.Address`.
 8. **Runner testów.** .NET 10 wymaga w `global.json` ustawienia `test.runner = Microsoft.Testing.Platform`, dlatego pakiety `Microsoft.NET.Test.Sdk` i `xunit.runner.visualstudio` nie są używane.
 9. **AutoMapper.** Decyzja Lidera: AutoMapper 16.2.0 w wariancie Community, bez klucza licencyjnego. Biblioteka działa poprawnie, a ostrzeżenie o braku licencji w logach jest znane i akceptowane. Linia 14.x nie wchodzi w grę, bo ma znaną lukę wysokiej wagi (GHSA-rvv3-g6hj-g44x).
@@ -103,6 +108,6 @@ Decyzje:
 
 ## 6. Pytania do Lidera
 
-1. Instancja SQL Server: migracja SQL Server jest wygenerowana i sprawdzona testem zgodności z modelem, ale niezastosowana (US-01-07 pkt 10 i 12). Testy `SqlServerProviderTests` są pominięte bez zmiennej `WEBSTORE_TEST_SQLSERVER`. Czekam na instancję na Windowsie.
+1. Testy i migracja SQL Server (US-01-07 pkt 10 i 12, US-01-10 pkt 9 oraz pozostałe testy `SqlServerProviderTests`) są wstrzymane do zajęć, na których będzie dostępna instancja. Znane ryzyko: `TestData.Seed` wstawia jawne `Id` do kolumn IDENTITY, co na SQL Server wymaga poprawki przy pierwszym uruchomieniu.
 
 Kod czeka na akceptację Lidera. Niczego nie commitowano.

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,7 @@ public class OrderService : BaseService, IOrderService
     public OrderVm AddOrUpdateOrder(AddOrUpdateOrderVm model) => Execute(nameof(AddOrUpdateOrder), () =>
     {
         ArgumentNullException.ThrowIfNull(model);
-        ArgumentNullException.ThrowIfNull(model.Products);
+        ValidateItems(model);
 
         Order? order = null;
         if (model.Id is not null and not 0)
@@ -35,10 +36,10 @@ public class OrderService : BaseService, IOrderService
 
         var productIds = model.Products.Select(p => p.ProductId).Distinct().ToList();
         var products = DbContext.Products.Where(p => productIds.Contains(p.Id)).ToDictionary(p => p.Id);
-        var missing = productIds.FirstOrDefault(id => !products.ContainsKey(id));
-        if (missing != 0)
+        var missing = productIds.Where(id => !products.ContainsKey(id)).ToList();
+        if (missing.Count > 0)
         {
-            throw NotFound(nameof(Product), missing);
+            throw new ValidationException($"Zamówienie wskazuje nieistniejące produkty: {string.Join(", ", missing)}.");
         }
 
         if (order is null)
@@ -74,6 +75,30 @@ public class OrderService : BaseService, IOrderService
 
             return Mapper.Map<List<OrderVm>>(query.ToList());
         });
+
+    // Błędy danych wejściowych są zgłaszane przed jakimkolwiek dostępem do bazy, więc nic nie zostaje zapisane.
+    private static void ValidateItems(AddOrUpdateOrderVm model)
+    {
+        ArgumentNullException.ThrowIfNull(model.Products);
+
+        if (model.Products.Count == 0)
+        {
+            throw new ValidationException("Zamówienie musi zawierać co najmniej jedną pozycję.");
+        }
+
+        foreach (var item in model.Products)
+        {
+            if (item.ProductId <= 0)
+            {
+                throw new ValidationException($"Nieprawidłowy identyfikator produktu: {item.ProductId}.");
+            }
+
+            if (item.Quantity <= 0)
+            {
+                throw new ValidationException($"Ilość produktu {item.ProductId} musi być większa od zera (podano {item.Quantity}).");
+            }
+        }
+    }
 
     private static IQueryable<Order> WithItems(IQueryable<Order> orders) =>
         orders.Include(o => o.OrderProducts).ThenInclude(op => op.Product).Include(o => o.Invoice);

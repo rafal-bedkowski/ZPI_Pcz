@@ -4,20 +4,23 @@
 
 **Zaakceptowano z uwagami.**
 
-Wszystkie 14 user stories mają status `Zweryfikowana`. Ponowna recenzja objęła US-01-01, 04, 09, 11 i 12 (zaktualizowane kryteria po poprawkach) oraz regresje. Pozostałe stories nie były zmieniane i zachowują wynik z poprzedniej recenzji. Brak uwag krytycznych. Części kryteriów dotyczących SQL Server (migracja, testy cen i kluczy obcych na tym providerze) nie da się zweryfikować bez instancji. Lider zna ten stan i zaakceptował go (uwaga nr 1 wstrzymana do zajęć).
+Wszystkie 14 user stories mają status `Zweryfikowana`. Brak uwag krytycznych. Kryteria dotyczące SQL Server zweryfikowano na lokalnej instancji SQL Server 2025 Express (`localhost\SQLEXPRESS`, Windows). Jedyna istotna uwaga (ciąg połączenia w `README.md`, uwaga nr 1) została rozstrzygnięta decyzją Lidera: ciąg usunięto, README opisuje jego składniki słowami. macOS nie był sprawdzany w tej recenzji (SQL Server działa tylko na Windowsie, SQLite na obu systemach).
 
 Uruchomione weryfikacje:
 - `dotnet build --no-incremental`: 0 błędów, 0 ostrzeżeń.
-- `dotnet test`: 113 testów, 110 zaliczonych, 0 niezaliczonych, 3 pominięte (`SqlServerProviderTests`, brak `WEBSTORE_TEST_SQLSERVER`).
+- `dotnet test` bez zmiennej: 115 testów, 110 zaliczonych, 0 niezaliczonych, 5 pominiętych (`SqlServerProviderTests`).
+- `dotnet test` z `WEBSTORE_TEST_SQLSERVER` (instancja `SQLEXPRESS`, uwierzytelnianie Windows, ustawiana tylko na czas polecenia): 115 testów, 115 zaliczonych, 0 niezaliczonych, 0 pominiętych.
+- Migracja SQL Server: `dotnet ef database update --context SqlServerDbContext` na tymczasowej bazie zastosowała `InitialSqlServer`; powstało 16 tabel, kolumny `Price`, `UnitPrice`, `TotalAmount` mają typ `decimal` o skali 2. Baza została usunięta; w instancji nie ma baz `WebStore*`.
+- Serwer niedostępny (`Server=localhost\NOSUCHINSTANCE`): `dotnet ef database update` kończy się błędem połączenia („Nie znaleziono serwera lub był on niedostępny”), bez utworzenia bazy.
+- Start aplikacji z `Database__Provider=SqlServer` i `ConnectionStrings__SqlServer`: HTTP 200 na `/`, w logu brak ostrzeżenia o `WebRootPath` (brak `wwwroot`: strona z instrukcją). Wariant z istniejącym `wwwroot` nie był uruchamiany (brak Node.js); gałąź `clientBuilt` w `Program.cs:13-17` przeanalizowana w kodzie.
 - `dotnet list package --deprecated` i `--vulnerable`: brak przestarzałych i podatnych pakietów.
-- `dotnet run --project WebStore.Web --urls http://127.0.0.1:5988` (bez `wwwroot`): HTTP 200 na `/`, w logu startowym brak ostrzeżenia o `WebRootPath`.
-- `Database__Provider=Oracle`: start kończy się wyjątkiem „Nieobsługiwany provider bazy danych 'Oracle'… Obsługiwane wartości: Sqlite (SQLite), SqlServer (SQL Server)”.
-- Przeszukanie repozytorium (bez `node_modules`, `bin`, `obj`): brak `TODO`/`FIXME`/`XXX`/`TBD`, zakomentowanego kodu, plików `*.bak`/`*_old`/`draft_*`/`tmp`, logów debugowych (`Console.Write`), komentarzy o historii zmian. Brak haseł i ciągów połączenia (test `US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword` oraz przegląd ręczny; w `DesignTimeFactories.cs` jest tylko neutralny ciąg LocalDB z `Trusted_Connection`). `webstore.db` jest ignorowany przez git (`.gitignore: *.db`).
-- `git status`: wyłącznie zmodyfikowane pliki śledzone (kod, testy, dokumenty sprintu), brak nowych plików nieśledzonych. Pozostałe wpisy to ignorowane `.DS_Store` i `webstore.db`.
+- Przeszukanie repozytorium (bez `node_modules`, `bin`, `obj`): brak `TODO`/`FIXME`/`XXX`/`TBD` w kodzie i dokumentacji sprintu (wystąpienia tylko w opisach zasad w `CLAUDE.md` i `.claude/agents`), brak zakomentowanego kodu, plików `*.bak`/`*_old`/`draft_*`/`tmp`, logów debugowych, komentarzy o historii zmian. Brak haseł (test `US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword`); ciąg połączenia występuje tylko jako neutralny ciąg LocalDB w `DesignTimeFactories.cs:27`. `webstore.db` jest ignorowany (`*.db`).
+- `git status`: czysty.
+- `README.md` i `raport-implementacji.md` są zgodne ze stanem faktycznym (liczby testów 115/110/5 i 115/115, instrukcje migracji i testów SQL Server).
 
 ## 2. Weryfikacja kryteriów akceptacji
 
-Skróty: **S** = Spełnione, **SQL** = część dotycząca SQL Server nie do zweryfikowania (brak instancji, stan zaakceptowany przez Lidera), **Odst.** = odstępstwo od treści zatwierdzone decyzją Lidera.
+Skrót: **S** = Spełnione.
 
 | US | Kryterium | Wynik | Dowód |
 |---|---|---|---|
@@ -33,7 +36,7 @@ Skróty: **S** = Spełnione, **SQL** = część dotycząca SQL Server nie do zwe
 | US-01-03 | 1–3 | S | `ModelTests.US_01_03_*`, `Product.cs`, `Category.cs`, `ProductStock.cs` |
 | US-01-04 | 1–3 | S | `ModelTests.US_01_04_*`, `Order.cs:322`, `OrderProduct.cs`, `Invoice.cs` |
 | | 4 suma | S | `ModelTests.US_01_04_TotalAmount_IsSumOfFrozenUnitPriceTimesQuantity` |
-| | 5 dokładność 2 miejsc | S (SQLite) / SQL | `DbContextTests.US_01_04_OrderWithFractionalPrices_KeepsExactTotalAfterRoundTrip` (60,04); SQL Server: `SqlServerProviderTests` pominięty. Patrz uwaga nr 1 |
+| | 5 dokładność 2 miejsc | S | `DbContextTests.US_01_04_OrderWithFractionalPrices_KeepsExactTotalAfterRoundTrip` (SQLite, 60,04); `SqlServerProviderTests.US_01_10_SqlServer_TotalAmountIsExactAfterRoundTrip` (SQL Server, zaliczony) |
 | | 6 zamrożona cena | S | `OrderServiceTests.US_01_11_ProductPriceChange_DoesNotAffectExistingOrder` |
 | | 7 `TotalAmount` faktury z zamówienia | S | `InvoiceService.cs:51-52` (przypisanie `order.TotalAmount`), `MainProfile.cs:41` (ignorowanie pola), `InvoiceServiceTests.US_01_12_InvoiceTotalAmount_IsComputedFromOrderAndRefreshedAfterOrderChange`. Patrz uwaga nr 3 |
 | US-01-05 | 1 | S | `ModelTests.US_01_05_StationaryStore_HasExactlyTheRequiredFields`, `StationaryStore.cs` |
@@ -42,18 +45,18 @@ Skróty: **S** = Spełnione, **SQL** = część dotycząca SQL Server nie do zwe
 | | 3 relacje 1:1 | S | `US_01_06_StoreAddressAndInvoiceOrder_AreOneToOne` |
 | | 4 klucz złożony | S | `US_01_06_OrderProduct_HasCompositeKeyOfOrderAndProduct` |
 | | 5 TPH | S | `US_01_06_AllUserTypes_ShareOneTableWithDiscriminator` |
-| | 6 klucz obcy | S (SQLite) / SQL | `US_01_06_ProductWithMissingCategoryOrSupplier_ViolatesForeignKey` (oba klucze); SQL Server pominięty |
+| | 6 klucz obcy | S | `US_01_06_ProductWithMissingCategoryOrSupplier_ViolatesForeignKey` (SQLite); `SqlServerProviderTests.US_01_10_SqlServer_MissingForeignKeyIsRejected` (SQL Server, zaliczony) |
 | | 7 brak providera w Model/Services/ViewModels | S | `US_01_06_ModelServicesViewModels_DoNotReferenceDatabaseProviders` (assembly i csproj); przegląd `using` w kodzie Services bez odwołań do providera |
 | US-01-07 | 1 domyślny SQLite | S | `ConfigurationTests.US_01_07_NoProviderConfigured_UsesSqlite` |
 | | 2 SQL Server z konfiguracji | S | `US_01_07_SqlServerConfigured_UsesSqlServerWithoutChangingServices` |
 | | 3 nieobsługiwany provider | S | test `US_01_07_UnsupportedProvider_FailsListingSupportedValues` oraz uruchomienie aplikacji z `Oracle` (czytelny wyjątek z listą wartości) |
-| | 4 operacje na cenach | S (SQLite) / SQL | `DbContextTests.US_01_07_PriceOperations_GiveCorrectResultsOnSqlite` (suma, sortowanie rosnące i malejące, filtr > 19,98); SQL Server pominięty. Ceny na SQLite przechowywane jako grosze (`ApplicationDbContext.cs:147-168`, migracja: kolumny `INTEGER`) |
-| | 5 brak sekretów | S | `US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword`, przegląd ręczny, `appsettings*.json` bez ciągu połączenia, `DatabaseServiceCollectionExtensions.cs:40-46` czyta wyłącznie konfigurację |
+| | 4 operacje na cenach | S | `DbContextTests.US_01_07_PriceOperations_GiveCorrectResultsOnSqlite` (suma, sortowanie, filtr > 19,98); `SqlServerProviderTests.US_01_10_SqlServer_PriceOperationsMatchSqlite` (SQL Server, zaliczony). Ceny na SQLite przechowywane jako grosze (`ApplicationDbContext.cs:147-168`, migracja: kolumny `INTEGER`) |
+| | 5 brak sekretów | S z zastrzeżeniem | `US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword`, przegląd ręczny, `appsettings*.json` bez ciągu połączenia, `DatabaseServiceCollectionExtensions.cs:40-46` czyta wyłącznie konfigurację. Zastrzeżenie: `README.md:61` zawiera ciąg połączenia (bez hasła), patrz uwaga nr 1 |
 | | 6 migracja SQLite | S | `MigrationTests.US_01_07_SqliteMigration_CreatesDatabaseFileWithAllTablesAndForeignKeys` (tabele i FK `OrderProducts`, `Products`) |
 | | 7 `.gitignore` | S | `.gitignore` (`*.db`), `webstore.db` widoczny jako ignorowany w `git status --ignored` |
 | | 8 pusta kolejna migracja SQLite | S | `MigrationTests.US_01_07_SqliteMigrations_AreUpToDateWithModel` (`HasPendingModelChanges` = false) |
 | | 9 niedostępna ścieżka | S (wg raportu) | Brak testu automatycznego. Programista opisuje ręczny test (`SQLite Error 14`). Nie powtórzyłem go, zachowanie wynika z natury SQLite i migracji w transakcji |
-| | 10, 12 migracja SQL Server (zastosowanie, błąd połączenia) | SQL | Brak instancji. Migracja jest wygenerowana (`Migrations/SqlServer`), kolumny `decimal(18,2)` |
+| | 10, 12 migracja SQL Server (zastosowanie, błąd połączenia) | S | Zastosowanie na SQLEXPRESS: `InitialSqlServer`, 16 tabel, kolumny `decimal` skala 2. Nieistniejący serwer: `dotnet ef database update` kończy się błędem połączenia, baza nie powstaje |
 | | 11 pusta kolejna migracja SQL Server | S | `MigrationTests.US_01_07_SqlServerMigrations_ExistAndAreUpToDateWithModel` |
 | US-01-08 | 1–7 | S | `ConventionTests.US_01_08_*` (foldery, `Vm`, `I…Service`, `BaseService` z polami `protected readonly`, `MainProfile`, `[Required]`, `AssertConfigurationIsValid`), `BaseService.cs` |
 | US-01-09 | 1–2 | S | `ProductServiceTests.US_01_09_Interface_DeclaresExpectedMethods`, `US_01_09_ViewModels_HaveExpectedMembers`, `IProductService.cs` |
@@ -61,17 +64,17 @@ Skróty: **S** = Spełnione, **SQL** = część dotycząca SQL Server nie do zwe
 | | 5 | S | `AddOrUpdateProduct_UnknownId_ThrowsNotFoundLogsAndAddsNothing` |
 | | 6, 7 | S | `AddOrUpdateProduct_Null_ThrowsArgumentNullAndLogs`, `GetProduct_NullFilter_ThrowsArgumentNullAndLogs` |
 | | 8, 9, 10 | S | `GetProduct_ByName_…`, `GetProducts_FilterAndNoFilter` (asercja z `_db.Products.Count()`), `GetProduct_NoMatch_ReturnsNull` |
-| | 11 filtry cen | S (SQLite) / SQL | `GetProducts_PriceFilters_ReturnOnlyMatchingProducts`; na SQL Server nie ma testu na poziomie usługi (uwaga nr 1) |
+| | 11 filtry cen | S | `GetProducts_PriceFilters_ReturnOnlyMatchingProducts` (SQLite); `SqlServerProviderTests.US_01_09_SqlServer_ProductService_PriceFiltersReturnOnlyMatchingProducts` (SQL Server, zaliczony) |
 | | 12 `ImageBytes` = null zachowuje obraz | S | `ProductServiceTests.US_01_09_AddOrUpdateProduct_NullImage_KeepsExistingImage` i `..._NewImage_ReplacesExistingImage`, `MainProfile.cs:16` (`Condition(s => s.ImageBytes != null)`) |
 | US-01-10 | 1 pakiety | S | `WebStore.Tests.csproj`: xunit.v3 4.0.2, Xunit.DependencyInjection 12.0.1, `US_01_10_TestProject_UsesXunitV3` |
 | | 2 konfiguracja DI | S | `Startup.cs` (SQLite in-memory z otwartym połączeniem, Identity wg wymagań, AutoMapper/`MainProfile`, `ILogger`, usługi) |
 | | 3 dane startowe | S | `Infrastructure/TestData.cs`, `SeedDataTests.US_01_10_*` |
-| | 4 `dotnet test` | S | 100 passed, 0 failed, 3 skipped, kod wyjścia 0 |
+| | 4 `dotnet test` | S | 115 testów: 110 zaliczonych, 0 niezaliczonych, 5 pominiętych (bez zmiennej), kod wyjścia 0 |
 | | 5 filtr | S | `--filter-class` wspierany przez runner MTP (`global.json`); nie powtórzyłem, bo nie jest sprzeczne z wynikiem pkt 4 |
 | | 6 izolacja | S | `Startup.cs` (scoped połączenie i `DbContext` na test), `SeedDataTests` (izolacja per test) |
 | | 7 klucze obce | S | `SeedDataTests` (`DbUpdateException` przy FK) |
 | | 8 asercja liczby | S | `ProductServiceTests.GetProducts_FilterAndNoFilter`, `OrderServiceTests.GetOrder_AndGetOrders_FilterCorrectly` porównują z `_db…Count()` |
-| | 9 testy na SQL Server | SQL | `SqlServerProviderTests` pominięte. Patrz uwaga nr 1 |
+| | 9 testy na SQL Server | S | `SqlServerProviderTests`: 5/5 zaliczonych ze zmienną; dane startowe bez jawnych `Id` (`TestData.cs`), stałe `TestData.*Id` zgodne z numeracją bazy, `SeedDataTests` nadal przechodzą |
 | US-01-11 | 1 | S | `OrderServiceTests.US_01_11_Structure_FollowsConventions` |
 | | 2 | S | `AddOrUpdateOrder_PersistsItemsWithFrozenCurrentPrice` |
 | | 3 | S | `GetOrder_AndGetOrders_FilterCorrectly` |
@@ -81,7 +84,7 @@ Skróty: **S** = Spełnione, **SQL** = część dotycząca SQL Server nie do zwe
 | | 7 `ProductId` <= 0 lub nieistniejący | S | `US_01_11_InvalidOrUnknownProduct_IsRejectedWithValidationErrorAndNothingSaved` (Theory), `ValidationException` zamiast `KeyNotFoundException` |
 | | 8 pusta lista pozycji | S | `US_01_11_EmptyItemList_IsRejectedWithValidationErrorAndNothingSaved` |
 | | 9 nieistniejące `Id` zamówienia | S | `AddOrUpdateOrder_UnknownId_ThrowsNotFound` |
-| | 10 `TotalAmount` ułamkowy | S (SQLite) / SQL | `TotalAmount_FractionalPrices_IsExactAfterSaveAndLoad` (60,04); SQL Server pominięty (uwaga nr 1) |
+| | 10 `TotalAmount` ułamkowy | S | `TotalAmount_FractionalPrices_IsExactAfterSaveAndLoad` (SQLite, 60,04); `SqlServerProviderTests.US_01_11_SqlServer_OrderService_TotalAmountWithFractionalPricesIsExactAfterSaveAndLoad` (SQL Server, 60,04, zaliczony) |
 | | 11 testy obejmują pkt 2–10 | S | testy powyżej, wszystkie przechodzą |
 | US-01-12 | 1–7 | S | `InvoiceServiceTests.US_01_12_*` (drugi zapis faktury dla zamówienia = `InvalidOperationException`, unikalny indeks w migracji) |
 | | 8 brak `TotalAmount` w VM, kwota z zamówienia, odświeżenie po zmianie | S | `AddOrUpdateInvoiceVm.cs` bez `TotalAmount`; `InvoiceServiceTests.US_01_12_InvoiceTotalAmount_IsComputedFromOrderAndRefreshedAfterOrderChange`; `InvoiceService.cs:51-52` |
@@ -97,25 +100,22 @@ Brak.
 
 ### Istotne
 
-**1. Testy SQL Server prawdopodobnie nie przejdą po udostępnieniu instancji (ryzyko dla US-01-04 pkt 5, US-01-06 pkt 6, US-01-07 pkt 4, US-01-09 pkt 11, US-01-10 pkt 9, US-01-11 pkt 10).** Stan znany i wstrzymany przez Lidera do zajęć.
-- Lokalizacja: `WebStore.Tests/Infrastructure/TestData.cs:21-65`, `WebStore.Tests/SqlServerProviderTests.cs:28`.
-- Opis: `TestData.Seed` ustawia jawne wartości kluczy (`Id = 1`, `2` itd.) dla encji, których kolumny w migracji SQL Server są IDENTITY. EF Core nie włącza `IDENTITY_INSERT` przy `SaveChanges`, więc SQL Server zwykle odrzuca takie wstawienie. Nie mam instancji, więc nie mogłem tego sprawdzić.
-- Scenariusz awarii: po uruchomieniu testów z `WEBSTORE_TEST_SQLSERVER` trzy testy kończą się błędem w `Open()` i nic nie dowodzą o cenach ani kluczach obcych.
-- Dodatkowo: brak testu SQL Server na poziomie usług (filtry cen w `ProductService`, `TotalAmount` w `OrderService`), którego wymagają US-01-09 pkt 11 i US-01-11 pkt 10.
-- Kierunek: w teście SQL Server wstawiać dane bez jawnych `Id` (lub użyć `SET IDENTITY_INSERT`), dodać po jednym teście usługowym i zweryfikować to jako pierwszy krok po uzyskaniu instancji.
+**1. Ciąg połączenia SQL Server w `README.md` (US-01-07 pkt 5).** Rozstrzygnięte decyzją Lidera.
+- Lokalizacja: `README.md:61`.
+- Opis: README zawierało gotowy ciąg połączenia do lokalnej instancji (bez hasła), co stało w sprzeczności z kryterium pkt 5 („ciąg połączenia SQL Server ani hasło nie występują w żadnym pliku repozytorium”). Test `US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword` tego nie wykrywa, bo szuka tylko `Password`/`Pwd`/`User Id`.
+- Rozstrzygnięcie: ciąg usunięto, README opisuje jego składniki słowami (serwer, uwierzytelnianie Windows, zaufanie certyfikatowi).
 
 ### Drobne
 
-**2. Powielony warunek w `Program.cs`.** Poprawione — do potwierdzenia w recenzji.
-- Lokalizacja: `WebStore.Web/Program.cs:13-24`.
-- Opis: dwa kolejne bloki `if (clientBuilt)` połączono w jeden z `else` (strona z instrukcją). Build 0/0, testy 110/0/3, uruchomienie bez `wwwroot` zwraca 200 z instrukcją.
-- Kierunek: kosmetyka, bez wpływu na kryteria.
+Brak.
 
-**3. `TotalAmount` faktury jest ustalany przy zapisie faktury (US-01-04 pkt 7, US-01-12 pkt 8).** Rozstrzygnięte decyzją Lidera — zachowanie poprawne.
-- Lokalizacja: `InvoiceService.cs:51-52`.
-- Opis: po zmianie pozycji zamówienia zapisana faktura zachowuje dotychczasową kwotę, dopóki nie zostanie ponownie zapisana przez `InvoiceService`. Jest to zgodne z treścią US-01-04 pkt 7 i US-01-12 pkt 8 oraz z charakterem faktury jako dokumentu, którego kwota nie zmienia się po wystawieniu.
-- Kierunek: brak zmian w kodzie.
+Uwagi z poprzedniej recenzji: powielony warunek w `Program.cs` został poprawiony (potwierdzone, bez regresji); `TotalAmount` faktury ustalany przy zapisie faktury (`InvoiceService.cs:51-52`) to decyzja Lidera i zgodne zachowanie; uwaga o testach SQL Server zamknięta, testy przechodzą na SQLEXPRESS.
 
 ## 4. Zakres
 
 Nie stwierdzono implementacji spoza zaakceptowanych user stories. Dodatki wymienione w raporcie implementacji (`Product.ProductStocks`, `Category.Products`, `ProductVm.Id`, `OrderVm.InvoiceId`, `StoreVm.Address`, osobne konteksty `SqliteDbContext`/`SqlServerDbContext`, minimalny klient React) są uzasadnione technicznie i nie wprowadzają nowej funkcjonalności. Zmiana `CLAUDE.md` (struktura, stos) jest zgodna z zakresem.
+
+## 5. Pytania do Lidera
+
+1. Czy prowadzący wymaga SQL Server w miejscu oceny projektu? Nie da się tego rozstrzygnąć z repozytorium; na instancji prowadzącego i na macOS SQL Server nie był sprawdzany.
+2. Czy ciąg połączenia bez hasła (uwierzytelnianie Windows) w `README.md` jest dopuszczalny wobec US-01-07 pkt 5 (uwaga nr 1), czy usunąć go z repozytorium?

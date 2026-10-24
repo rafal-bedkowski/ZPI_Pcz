@@ -81,7 +81,7 @@ PATH musi zawierać `dotnet` (macOS: `/usr/local/share/dotnet` lub `/opt/homebre
 ## 4. Wynik testów i weryfikacji
 
 - `dotnet test` bez zmiennej `WEBSTORE_TEST_SQLSERVER`: 115 testów, 110 zaliczonych, 0 niezaliczonych, 5 pominiętych (`SqlServerProviderTests`). Kod wyjścia 0 na macOS i na Windowsie.
-- `dotnet test` ze zmienną `WEBSTORE_TEST_SQLSERVER` (SQL Server 2025 Express, `Server=localhost\SQLEXPRESS`, Windows): 115 testów, 115 zaliczonych, 0 niezaliczonych, 0 pominiętych. Po przebiegu w instancji nie zostają bazy `WebStoreTests_*`.
+- `dotnet test` ze zmienną `WEBSTORE_TEST_SQLSERVER` (SQL Server 2025 Express, instancja `SQLEXPRESS`, Windows): 115 testów, 115 zaliczonych, 0 niezaliczonych, 0 pominiętych. Po przebiegu w instancji nie zostają bazy `WebStoreTests_*`.
 - `dotnet build --no-incremental`: 0 błędów, 0 ostrzeżeń.
 - `dotnet list package --deprecated --vulnerable`: brak przestarzałych i podatnych pakietów.
 - `dotnet run --project WebStore.Web`: strona główna zwraca HTTP 200; bez zbudowanego klienta — 200 z instrukcją jego zbudowania.

@@ -114,15 +114,47 @@ public class ArchitectureTests
     [Fact]
     public void US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword()
     {
-        var pattern = new Regex(@"(Password|Pwd)\s*=\s*[^;""'\s]+|User\s*Id\s*=", RegexOptions.IgnoreCase);
-        var offenders = RepositoryPaths.TrackedFiles()
-            .Where(f => f.EndsWith(".cs") || f.EndsWith(".json") || f.EndsWith(".csproj") || f.EndsWith(".md"))
+        var offenders = RepositoryPaths.RepositoryFiles()
+            .Where(f => new[] { ".cs", ".json", ".csproj", ".md", ".ps1", ".sh" }.Any(f.EndsWith))
             .Where(f => !f.Contains("ArchitectureTests.cs") && !f.Contains("package-lock.json")
                         && !(OperatingSystem.IsWindows() ? f.Replace('\\', '/') : f).Contains("/Migrations/"))
-            .Where(f => pattern.IsMatch(File.ReadAllText(f)))
+            .Where(f => ConnectionSecretPattern.IsMatch(File.ReadAllText(f)))
             .ToList();
 
         Assert.Empty(offenders);
+    }
+
+    // Hasło, login w ciągu połączenia (po separatorze lub cudzysłowie, więc nie zwykły kod typu `UserId = 5`)
+    // albo serwer z konkretną nazwą instancji (host\instancja) oznacza ciąg połączenia zapisany w pliku.
+    private static readonly Regex ConnectionSecretPattern = new(
+        @"(?<![A-Za-z0-9_])(Password|Pwd)\s*=\s*[^;""'`<>\s]+"
+        + @"|[;""']\s*User\s*Id\s*=(?!=)"
+        + @"|(?<![A-Za-z0-9_])(Server|Data\s*Source)\s*=\s*[^;""'\s\\]+\\{1,2}[A-Za-z]",
+        RegexOptions.IgnoreCase);
+
+    [Theory]
+    [InlineData("Server=db;User Id=sa;Password=abc")]
+    [InlineData("Server=db;UserID=sa;Database=x")]
+    [InlineData("\"UserId=sa;Database=x\"")]
+    [InlineData("Server=db;Pwd=abc;")]
+    [InlineData("Server=localhost\\SQLEXPRESS;Database=x")]
+    [InlineData("Data Source=.\\SQLEXPRESS;Initial Catalog=x")]
+    public void US_01_07_ConnectionSecretPattern_DetectsConnectionStrings(string text)
+    {
+        Assert.Matches(ConnectionSecretPattern, text);
+    }
+
+    [Theory]
+    [InlineData("var UserId = 5;")]
+    [InlineData("order.UserId = id;")]
+    [InlineData("if (x.UserId == y.UserId) { }")]
+    [InlineData("o.Password.RequiredLength = 8;")]
+    [InlineData("PasswordHash = hash;")]
+    [InlineData("Server=localhost;Database=Ignored")]
+    [InlineData("klucze `Uid=`/`Pwd=` puste")]
+    public void US_01_07_ConnectionSecretPattern_IgnoresOrdinaryCode(string text)
+    {
+        Assert.DoesNotMatch(ConnectionSecretPattern, text);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace WebStore.DAL.EF;
 
@@ -18,13 +19,16 @@ public class SqliteDbContextFactory : IDesignTimeDbContextFactory<SqliteDbContex
 
 public class SqlServerDbContextFactory : IDesignTimeDbContextFactory<SqlServerDbContext>
 {
-    public const string ConnectionVariable = "ConnectionStrings__SqlServer";
-
     public SqlServerDbContext CreateDbContext(string[] args)
     {
-        // Generowanie migracji nie łączy się z bazą, więc bez zmiennej używany jest neutralny ciąg bez haseł.
-        var connectionString = Environment.GetEnvironmentVariable(ConnectionVariable)
-                               ?? "Server=(localdb)\\MSSQLLocalDB;Database=WebStore;Trusted_Connection=True;";
+        // Ciąg połączenia pochodzi z tych samych źródeł co w aplikacji: zmiennej środowiskowej lub user-secrets.
+        // Generowanie migracji nie łączy się z bazą, więc bez konfiguracji używany jest neutralny ciąg bez haseł.
+        var configuration = new ConfigurationBuilder()
+            .AddUserSecrets<SqlServerDbContextFactory>(optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+        var connectionString = configuration.GetConnectionString("SqlServer")
+                               ?? "Server=localhost;Database=WebStore;Trusted_Connection=True;";
         var options = new DbContextOptionsBuilder<SqlServerDbContext>()
             .UseSqlServer(connectionString)
             .Options;

@@ -4,11 +4,11 @@
 
 Uwagi ogólne:
 - Dokument wymagań jest instrukcją laboratoryjną. Rodzaje technologii wynikają z niego wprost: .NET (C#), Entity Framework Core, AutoMapper, framework testowy xUnit, klient React. Wersje mają być aktualne i stabilne: .NET 10 (LTS), EF Core 10.x, AutoMapper 16.x, xunit.v3. Dokładne numery wersji pakietów ustala programista poleceniem `dotnet package search` i nie są one kryteriami akceptacji. Przykładowy kod z instrukcji (m.in. testy) wymaga dostosowania do wybranych wersji, w szczególności do xUnit v3.
-- Baza danych: domyślnym providerem jest SQLite (działa na macOS i Windows bez serwera). SQL Server (wskazany w instrukcji) jest wariantem alternatywnym włączanym konfiguracją, bez zmian w modelu i usługach.
+- Baza danych: domyślnym providerem w kodzie i w `appsettings.json` pozostaje SQLite (macOS oraz uruchomienie bez konfiguracji). Na Windowsie wymagany jest SQL Server (wskazany w instrukcji), włączany konfiguracją użytkownika poza repozytorium, bez zmian w modelu i usługach (US-01-07, US-01-15). Na macOS SQL Server nie jest w zakresie.
 - Nazwa solucji: `WebStore`. Nazwy projektów: `WebStore.Model`, `WebStore.DAL`, `WebStore.Services`, `WebStore.ViewModels`, `WebStore.Web`, `WebStore.Tests`.
 - Cała solucja, w tym projekt testów, używa jednej wersji platformy .NET.
 - Zasady zwracania wyników przez wszystkie usługi: brak dopasowania do filtra daje wynik `null`; zapis z `Id` wskazującym nieistniejący rekord kończy się wyjątkiem „nie znaleziono”; `Id` puste lub równe 0 oznacza dodanie nowego rekordu.
-- Poza zakresem user stories (czynności Lidera lub osobne zlecenia Lidera): klonowanie repozytorium, gałęzie, token, commit i push, instalacja narzędzi (VS Code, rozszerzenia, SDK), skrypty konfiguracji środowiska (`setup.sh`, `setup.ps1`) oraz sekcja „Środowisko” w `CLAUDE.md`. Na maszynie z Windows Lider ma uprawnienia administratora, więc `setup.ps1` może instalować .NET SDK globalnie.
+- Poza zakresem user stories (czynności Lidera lub osobne zlecenia Lidera): klonowanie repozytorium, gałęzie, token, commit i push, instalacja narzędzi (VS Code, rozszerzenia, SDK), skrypty konfiguracji środowiska (`setup.sh`, `setup.ps1`; z wyjątkiem kroku konfiguracji SQL Server w `setup.ps1`, który opisuje US-01-15) oraz sekcja „Środowisko” w `CLAUDE.md`. Na maszynie z Windows Lider ma uprawnienia administratora, więc `setup.ps1` może instalować .NET SDK globalnie.
 - Poza zakresem sprintu: testy integracyjne i testy GUI (Selenium), mierzalny próg pokrycia kodu, kontrolery API i Swagger.
 
 ---
@@ -141,12 +141,12 @@ Uwagi ogólne:
 ### US-01-07: Provider bazy danych, migracje i utworzenie bazy
 
 **Status:** Zweryfikowana
-**Źródło:** Rozdz. 1.2, rozdz. 4 (wstęp i akapit końcowy); decyzja Lidera o domyślnym providerze SQLite
+**Źródło:** Rozdz. 1.2, rozdz. 4 (wstęp i akapit końcowy); decyzje Lidera o domyślnym providerze SQLite i o wymaganiu SQL Server na Windowsie
 **Priorytet:** Wysoki
 
 **Jako** programista
-**chcę** wybierać provider bazy konfiguracją (domyślnie SQLite, alternatywnie SQL Server) i mieć dla każdego z nich migracje
-**aby** baza odpowiadała modelowi na macOS i Windows bez serwera, a w razie wymogu prowadzącego dało się przejść na SQL Server bez zmian w modelu i usługach.
+**chcę** wybierać provider bazy konfiguracją (domyślnie SQLite, na Windowsie SQL Server) i mieć dla każdego z nich migracje
+**aby** baza odpowiadała modelowi na macOS (SQLite) i na Windowsie (SQL Server) bez zmian w modelu i usługach.
 
 **Kryteria akceptacji:**
 
@@ -155,20 +155,21 @@ Wspólne:
 2. **Zakładając, że** w konfiguracji wskazano provider SQL Server wraz z danymi połączenia, **gdy** aplikacja zostanie uruchomiona, **wtedy** używa SQL Server, a kod modelu, view modeli i usług nie wymaga żadnych zmian.
 3. **Zakładając, że** w konfiguracji wskazano nieobsługiwaną nazwę providera, **gdy** aplikacja startuje, **wtedy** kończy się czytelnym błędem wymieniającym obsługiwane wartości (SQLite, SQL Server), a nie niezwiązanym wyjątkiem.
 4. **Zakładając, że** zapisane są produkty o cenach 19,99, 0,01 i 1000,00 oraz zamówienia z kilkoma pozycjami, **gdy** zostanie wykonane sumowanie cen, sortowanie rosnące i malejące po cenie, filtr zakresu cen (np. cena > 19,98) oraz wyliczenie `TotalAmount`, **wtedy** wyniki są poprawne i identyczne na SQLite i na SQL Server (SQLite nie ma natywnego typu decimal, więc operacje na cenach nie mogą dawać wyników zależnych od providera).
-5. **Zakładając, że** repozytorium jest sprawdzone, **gdy** zostaną przejrzone jego pliki i historia konfiguracji, **wtedy** ciąg połączenia SQL Server ani hasło nie występują w żadnym pliku repozytorium; wartości te są odczytywane wyłącznie z user-secrets lub zmiennej środowiskowej.
+5. **Zakładając, że** repozytorium jest sprawdzone, **gdy** zostaną przejrzone jego pliki (w tym `appsettings*.json`, `README`, `setup.sh`, `setup.ps1`) i historia konfiguracji, **wtedy** ciąg połączenia SQL Server ani hasło nie występują w żadnym pliku repozytorium; wartości te są odczytywane wyłącznie z user-secrets lub zmiennej środowiskowej.
+6. **Zakładając, że** `appsettings.json` jest sprawdzony, **gdy** zostanie odczytana wartość `Database:Provider`, **wtedy** wynosi `Sqlite`, a ustawienie providera SQL Server na Windowsie odbywa się wyłącznie przez user-secrets (`Database:Provider` = `SqlServer`, `ConnectionStrings:SqlServer`) lub zmienne środowiskowe (kroki konfiguracji: US-01-15).
 
 Wariant (a) — SQLite (domyślny):
-6. **Zakładając, że** nie istnieje plik bazy SQLite, **gdy** zostanie zastosowana migracja SQLite, **wtedy** polecenie kończy się sukcesem, plik bazy zostaje utworzony w katalogu projektu `WebStore.Web`, a w bazie istnieją tabele wszystkich encji z US-01-02–US-01-05 oraz tabela łącząca OrderProduct z kluczami obcymi relacji z US-01-06.
-7. **Zakładając, że** plik bazy SQLite został utworzony, **gdy** zostanie sprawdzone polecenie `git status`, **wtedy** plik bazy nie jest widoczny jako nieśledzony, ponieważ jest wykluczony wpisem w `.gitignore`.
-8. **Zakładając, że** model nie zmienił się od ostatniej migracji SQLite, **gdy** zostanie wygenerowana kolejna migracja, **wtedy** jest ona pusta.
-9. **Zakładając, że** ścieżka pliku bazy jest niedostępna do zapisu, **gdy** zostanie zastosowana migracja, **wtedy** polecenie kończy się błędem dostępu, a w bazie nie pozostają częściowe zmiany.
+7. **Zakładając, że** nie istnieje plik bazy SQLite, **gdy** zostanie zastosowana migracja SQLite, **wtedy** polecenie kończy się sukcesem, plik bazy zostaje utworzony w katalogu projektu `WebStore.Web`, a w bazie istnieją tabele wszystkich encji z US-01-02–US-01-05 oraz tabela łącząca OrderProduct z kluczami obcymi relacji z US-01-06.
+8. **Zakładając, że** plik bazy SQLite został utworzony, **gdy** zostanie sprawdzone polecenie `git status`, **wtedy** plik bazy nie jest widoczny jako nieśledzony, ponieważ jest wykluczony wpisem w `.gitignore`.
+9. **Zakładając, że** model nie zmienił się od ostatniej migracji SQLite, **gdy** zostanie wygenerowana kolejna migracja, **wtedy** jest ona pusta.
+10. **Zakładając, że** ścieżka pliku bazy jest niedostępna do zapisu, **gdy** zostanie zastosowana migracja, **wtedy** polecenie kończy się błędem dostępu, a w bazie nie pozostają częściowe zmiany.
 
-Wariant (b) — SQL Server (alternatywny):
-10. **Zakładając, że** działa instancja SQL Server (LocalDB lub kontener) i skonfigurowano połączenie, **gdy** zostanie zastosowana migracja SQL Server, **wtedy** polecenie kończy się sukcesem, a w bazie istnieją te same tabele i klucze obce co w wariancie (a).
-11. **Zakładając, że** model nie zmienił się od ostatniej migracji SQL Server, **gdy** zostanie wygenerowana kolejna migracja, **wtedy** jest ona pusta.
-12. **Zakładając, że** serwer SQL Server jest niedostępny, **gdy** zostanie zastosowana migracja, **wtedy** polecenie kończy się błędem połączenia, a w bazie nie pozostają częściowe zmiany.
+Wariant (b) — SQL Server (wymagany na Windowsie):
+11. **Zakładając, że** na Windowsie działa lokalna instancja SQL Server (np. Express) i skonfigurowano połączenie (US-01-15), **gdy** zostanie wykonane `dotnet ef database update --context SqlServerDbContext`, **wtedy** polecenie kończy się sukcesem, a w bazie istnieją te same tabele i klucze obce co w wariancie (a).
+12. **Zakładając, że** model nie zmienił się od ostatniej migracji SQL Server, **gdy** zostanie wygenerowana kolejna migracja, **wtedy** jest ona pusta.
+13. **Zakładając, że** serwer SQL Server jest niedostępny, **gdy** zostanie zastosowana migracja, **wtedy** polecenie kończy się błędem połączenia, a w bazie nie pozostają częściowe zmiany.
 
-**Uwagi:** Lider ustala z prowadzącym, czy SQL Server jest obowiązkowy; do tego czasu oba warianty pozostają w zakresie.
+**Uwagi:** SQL Server jest wymagany na Windowsie (decyzja Lidera); macOS pozostaje przy SQLite bez dodatkowych wymagań. Konfiguracja SQL Server na Windowsie: US-01-15.
 
 ---
 
@@ -240,7 +241,7 @@ Wariant (b) — SQL Server (alternatywny):
 6. **Zakładając, że** każdy test ma własną, odrębną bazę SQLite w pamięci wypełnioną danymi startowymi, **gdy** testy zostaną uruchomione w dowolnej kolejności lub równolegle, **wtedy** wynik każdego testu nie zależy od zmian wprowadzonych przez inne testy.
 7. **Zakładając, że** baza testowa to SQLite w pamięci, **gdy** test zapisuje encję z nieistniejącym kluczem obcym, **wtedy** zapis kończy się wyjątkiem (baza testowa egzekwuje ograniczenia kluczy obcych).
 8. **Zakładając, że** test pobiera wszystkie produkty, **gdy** zostanie wykonana asercja liczby wyników, **wtedy** porównuje ją z liczbą produktów faktycznie obecnych w bazie (a nie ze sobą samą).
-9. **Zakładając, że** dostępna jest instancja SQL Server i skonfigurowano wariant (b) z US-01-07, **gdy** testy dotyczące cen i `TotalAmount` (US-01-04 pkt 5, US-01-07 pkt 4, US-01-09 pkt 11) zostaną uruchomione na tym providerze, **wtedy** przechodzą tak samo jak na SQLite.
+9. **Zakładając, że** dostępna jest instancja SQL Server, skonfigurowano wariant (b) z US-01-07 i ustawiono zmienną `WEBSTORE_TEST_SQLSERVER`, **gdy** testy dotyczące cen i `TotalAmount` (US-01-04 pkt 5, US-01-07 pkt 4, US-01-09 pkt 11) zostaną uruchomione na tym providerze, **wtedy** przechodzą tak samo jak na SQLite.
 
 **Uwagi:** Przykładowy kod testów z instrukcji (atrybuty testów, wstrzykiwanie przez konstruktor, `Startup`) napisano pod xUnit 2.x i wymaga dostosowania do xUnit v3. Testy integracyjne i GUI oraz mierzalny próg pokrycia są poza zakresem sprintu.
 
@@ -343,12 +344,41 @@ Wariant (b) — SQL Server (alternatywny):
 
 ---
 
+### US-01-15: Konfiguracja SQL Server na Windowsie (setup.ps1)
+
+**Status:** Zweryfikowana
+**Źródło:** Rozdz. 1.2; decyzja Lidera o wymaganiu SQL Server na Windowsie
+**Priorytet:** Wysoki
+
+**Jako** programista pracujący na Windowsie
+**chcę** aby `setup.ps1` za moją zgodą skonfigurował aplikację do pracy z lokalną instancją SQL Server Express
+**aby** po jednym poleceniu uruchamiać aplikację, migracje i testy na SQL Server bez ręcznego ustawiania konfiguracji i bez zapisywania danych połączenia w repozytorium.
+
+**Kryteria akceptacji:**
+1. **Zakładając, że** na Windowsie działa usługa `MSSQL$SQLEXPRESS`, **gdy** `setup.ps1` zostanie uruchomiony bez `-CheckOnly`, **wtedy** skrypt wykrywa instancję i pyta o zgodę na konfigurację (`[t/N]`, domyślnie „nie”, tak jak przy instalacjach narzędzi).
+2. **Zakładając, że** użytkownik odpowiedział `t`, **gdy** skrypt kontynuuje, **wtedy** ustawia w user-secrets projektu `WebStore.Web` wartości `Database:Provider` = `SqlServer` oraz `ConnectionStrings:SqlServer`; ciąg połączenia jest składany w czasie działania skryptu z wykrytej nazwy instancji i używa uwierzytelniania Windows (bez nazwy użytkownika i hasła) oraz zaufania certyfikatowi serwera.
+3. **Zakładając, że** user-secrets projektu `WebStore.Web` zawierają już `Database:Provider` lub `ConnectionStrings:SqlServer`, a użytkownik zgodził się na konfigurację, **gdy** skrypt kontynuuje, **wtedy** dodatkowo pyta `[t/N]` (domyślnie „nie”) o nadpisanie istniejących wartości; przy odpowiedzi innej niż `t` niczego nie zmienia i wypisuje informację, że istniejące user-secrets zostały zachowane.
+4. **Zakładając, że** użytkownik odpowiedział inaczej niż `t` (w tym samym Enter), **gdy** skrypt kontynuuje, **wtedy** user-secrets nie są zmieniane, a skrypt wypisuje informację, że SQL Server nie został skonfigurowany.
+5. **Zakładając, że** na komputerze nie ma usługi `MSSQL$SQLEXPRESS`, **gdy** `setup.ps1` zostanie uruchomiony, **wtedy** skrypt nie pyta o zgodę, wypisuje informację, jak zainstalować SQL Server Express, nie zmienia user-secrets, a pozostałe kroki (restore, build, testy) wykonują się i kończą się tak jak przed tą zmianą (aplikacja działa na SQLite).
+6. **Zakładając, że** skrypt uruchomiono z parametrem `-CheckOnly`, **gdy** skrypt się wykona, **wtedy** nie pyta o zgodę, nie ustawia user-secrets i co najwyżej informuje o wykryciu lub braku instancji.
+7. **Zakładając, że** repozytorium jest sprawdzone po uruchomieniu skryptu, **gdy** zostaną przejrzone pliki repozytorium (w tym `setup.ps1`, `appsettings*.json`, `README`), **wtedy** nie występuje w nich ciąg połączenia SQL Server z konkretną nazwą instancji ani żadne hasło (US-01-07 pkt 5); `git status` nie pokazuje zmian po konfiguracji.
+8. **Zakładając, że** user-secrets zostały ustawione krokiem z pkt 2, **gdy** zostanie wykonane `dotnet run --project WebStore.Web` bez dodatkowych zmiennych środowiskowych, **wtedy** aplikacja startuje na SQL Server (po zastosowaniu migracji) i odpowiada na stronę główną kodem 200.
+9. **Zakładając, że** user-secrets zostały ustawione, **gdy** zostanie wykonane `dotnet ef database update --context SqlServerDbContext`, **wtedy** polecenie kończy się sukcesem i baza zawiera schemat zgodny z US-01-07 pkt 11.
+10. **Zakładając, że** user-secrets zostały ustawione i `WEBSTORE_TEST_SQLSERVER` zawiera ciąg połączenia do tej instancji, **gdy** zostanie wykonane `dotnet test`, **wtedy** testy wariantu SQL Server nie są pomijane i wszystkie testy kończą się wynikiem „Passed”.
+11. **Zakładając, że** żadna konfiguracja SQL Server nie została wykonana (lub działa macOS), **gdy** zostanie wykonane `dotnet run --project WebStore.Web`, **wtedy** aplikacja używa SQLite (US-01-07 pkt 1).
+12. **Zakładając, że** sprawdzony jest `README`, **gdy** zostanie przeczytana sekcja dla Windowsa, **wtedy** opisuje krok konfiguracji SQL Server w `setup.ps1`, ręczne ustawienie user-secrets, migrację SQL Server i uruchomienie testów z `WEBSTORE_TEST_SQLSERVER`; sekcja dla macOS opisuje wyłącznie SQLite.
+13. **Zakładając, że** sprawdzony jest `README`, **gdy** zostanie przeczytana sekcja dla Windowsa, **wtedy** opisuje ręczną konfigurację user-secrets (`Database:Provider` = `SqlServer`, `ConnectionStrings:SqlServer`) dla dowolnej innej instancji SQL Server (np. innej wersji lub typu, w tym z logowaniem hasłem) i stwierdza, że ciąg połączenia oraz hasło nie mogą trafić do żadnego pliku repozytorium.
+
+**Uwagi:** Wydzielone z US-01-07, bo dotyczy skryptu środowiskowego i dokumentacji, a nie samego mechanizmu wyboru providera. Zależy od US-01-07 (provider, migracje) i US-01-10 (testy SQL Server). Test na instancji SQL Server prowadzącego (inna wersja lub typ, ewentualne logowanie hasłem) jest poza zakresem sprintu 1; obejmuje go wyłącznie opis ręcznej konfiguracji w README (pkt 13).
+
+---
+
 ## Macierz pokrycia
 
 | Wymaganie z dokumentu | Identyfikatory US |
 |---|---|
 | 1.1 .NET SDK | US-01-01 (platforma, wersje i `global.json` wg decyzji Lidera) |
-| 1.2 Baza SQL Server LocalDB/Express (Docker azure-sql-edge) | US-01-07 (SQLite domyślnie, SQL Server jako wariant alternatywny) |
+| 1.2 Baza SQL Server LocalDB/Express (Docker azure-sql-edge) | US-01-07 (SQLite domyślnie; SQL Server wymagany na Windowsie), US-01-15 (konfiguracja SQL Server Express przez `setup.ps1`), US-01-10 pkt 9 (testy SQL Server); macOS: SQLite |
 | 1.3 Visual Studio Code i rozszerzenia | Poza zakresem (czynność Lidera) |
 | 1.4 Git: klonowanie, gałąź na studenta, token, commit i push | Poza zakresem (czynność Lidera; commity wyłącznie Lider) |
 | 2. Solucja, 5 projektów, referencje, build, uruchomienie | US-01-01 |
@@ -372,4 +402,6 @@ Wariant (b) — SQL Server (alternatywny):
 | Niefunkcjonalne: „dążenie do pokrycia testami jak największej ilości kodu” | US-01-10 (testy usług), bez progu pokrycia |
 | Decyzja Lidera: poprawność operacji na cenach i TotalAmount na obu providerach | US-01-04, US-01-07, US-01-09, US-01-10, US-01-11 |
 | Decyzja Lidera: rejestracja usług w DI, brak kontrolerów i Swaggera | US-01-01 |
-| Skrypty konfiguracji środowiska (`setup.sh`, `setup.ps1`), sekcja „Środowisko” w `CLAUDE.md` | Poza zakresem stories (osobne zlecenie Lidera) |
+| Decyzja Lidera: krok SQL Server w `setup.ps1` (user-secrets, zgoda `[t/N]`, `-CheckOnly`), opis w README | US-01-15 |
+| Decyzja Lidera: instancja prowadzącego poza zakresem testów, opis ręcznej konfiguracji user-secrets w README | US-01-15 pkt 13 |
+| Skrypty konfiguracji środowiska (`setup.sh`, `setup.ps1`), sekcja „Środowisko” w `CLAUDE.md` (poza krokiem SQL Server) | Poza zakresem stories (osobne zlecenie Lidera) |

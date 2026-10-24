@@ -17,7 +17,7 @@ Szczegółowe zasady projektu znajdują się w [CLAUDE.md](CLAUDE.md), a opisy r
 
 - **Serwer:** .NET 10 (LTS), C#, ASP.NET Core; wersja SDK przypięta w `global.json`.
 - **Dostęp do danych:** Entity Framework Core 10, AutoMapper 16.
-- **Baza danych:** SQLite (domyślnie) lub SQL Server (wybór w konfiguracji).
+- **Baza danych:** SQLite (domyślnie, macOS) lub SQL Server (Windows: Express, instancja `SQLEXPRESS`; wybór w konfiguracji).
 - **Klient:** React 19 + Vite (`WebStore.Web/ClientApp`).
 - **Testy:** xunit.v3, SQLite in-memory.
 
@@ -57,3 +57,5 @@ dotnet run --project WebStore.Web
 Klient React: `npm install` i `npm run dev` w `WebStore.Web/ClientApp` (praca nad klientem) lub `npm run build` (wynik w `WebStore.Web/wwwroot`).
 
 Testy wariantu SQL Server są pomijane, dopóki zmienna środowiskowa `WEBSTORE_TEST_SQLSERVER` nie zawiera ciągu połączenia do instancji SQL Server.
+
+Baza danych według systemu: na Windowsie używamy SQL Server (Express, instancja `SQLEXPRESS`), na macOS SQLite (domyślny). SQL Server włącza się zmiennymi `Database__Provider=SqlServer` i `ConnectionStrings__SqlServer` (zmienna środowiskowa lub `dotnet user-secrets`, nigdy w repozytorium). Testy SQL Server na Windowsie: `$env:WEBSTORE_TEST_SQLSERVER = 'Server=localhost\SQLEXPRESS;Trusted_Connection=True;TrustServerCertificate=True'`, następnie `dotnet test --filter-class WebStore.Tests.SqlServerProviderTests`. Do ustalenia z prowadzącym pozostaje, czy wymaga SQL Server w miejscu oceny projektu.

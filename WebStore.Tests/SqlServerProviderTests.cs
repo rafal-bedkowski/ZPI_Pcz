@@ -1,5 +1,9 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using WebStore.Services.Configuration;
+using WebStore.Services.Interfaces;
+using WebStore.ViewModels.VM;
 using WebStore.DAL.EF;
 using WebStore.Model.DataModels;
 using WebStore.Tests.Infrastructure;
@@ -26,6 +30,56 @@ public sealed class SqlServerProviderTests : IDisposable
         _db.Database.EnsureCreated();
         TestData.Seed(_db);
         return _db;
+    }
+
+    // Usługi aplikacji na tym samym kontekście SQL Server, aby sprawdzić je na docelowym providerze.
+    private ServiceProvider BuildServices(SqlServerDbContext db)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ApplicationDbContext>(db);
+        services.AddWebStoreServices();
+        return services.BuildServiceProvider();
+    }
+
+    [Fact]
+    public void US_01_09_SqlServer_ProductService_PriceFiltersReturnOnlyMatchingProducts()
+    {
+        using var provider = BuildServices(Open());
+        var products = provider.GetRequiredService<IProductService>();
+
+        var expensive = products.GetProducts(p => p.Price > 600).Single();
+        var cheap = products.GetProducts(p => p.Price <= 500).Single();
+
+        Assert.Equal("Monitor Dell 32", expensive.Name);
+        Assert.Equal("Mysz Logitech", cheap.Name);
+    }
+
+    [Fact]
+    public void US_01_11_SqlServer_OrderService_TotalAmountWithFractionalPricesIsExactAfterSaveAndLoad()
+    {
+        var db = Open();
+        db.Products.Single(p => p.Id == TestData.MonitorId).Price = 19.99m;
+        db.Products.Single(p => p.Id == TestData.MouseId).Price = 0.01m;
+        db.SaveChanges();
+        using var provider = BuildServices(db);
+        var orders = provider.GetRequiredService<IOrderService>();
+
+        var saved = orders.AddOrUpdateOrder(new AddOrUpdateOrderVm
+        {
+            CustomerId = TestData.CustomerId, OrderDate = new DateTime(2025, 3, 1), DeliveryDate = new DateTime(2025, 3, 5),
+            TrackingNumber = 123456789012L,
+            Products =
+            [
+                new AddOrUpdateOrderProductVm { ProductId = TestData.MonitorId, Quantity = 3 },
+                new AddOrUpdateOrderProductVm { ProductId = TestData.MouseId, Quantity = 7 }
+            ]
+        });
+        db.ChangeTracker.Clear();
+        var loaded = orders.GetOrder(o => o.Id == saved.Id)!;
+
+        Assert.Equal(60.04m, saved.TotalAmount);
+        Assert.Equal(60.04m, loaded.TotalAmount);
     }
 
     [Fact]

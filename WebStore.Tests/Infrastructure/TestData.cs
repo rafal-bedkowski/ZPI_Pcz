@@ -17,17 +17,19 @@ public static class TestData
     public const int StoreAddressId = 3;
     public const int FreeAddressId = 4;
 
+    // Id nadaje baza (kolumny IDENTITY w SQL Server nie przyjmują jawnych wartości). Na świeżej bazie
+    // numeracja startuje od 1, a rekordy zapisywane są etapami w kolejności zgodnej ze stałymi Id.
     public static void Seed(ApplicationDbContext db)
     {
         db.Addresses.AddRange(
-            NewAddress(CustomerBillingAddressId, "Rozliczeniowa", "1"),
-            NewAddress(CustomerShippingAddressId, "Wysyłkowa", "2"),
-            NewAddress(StoreAddressId, "Sklepowa", "3"),
-            NewAddress(FreeAddressId, "Wolna", "4"));
+            NewAddress("Rozliczeniowa", "1"),
+            NewAddress("Wysyłkowa", "2"),
+            NewAddress("Sklepowa", "3"),
+            NewAddress("Wolna", "4"));
+        db.SaveChanges();
 
         db.Suppliers.Add(new Supplier
         {
-            Id = SupplierId,
             FirstName = "Adam",
             LastName = "Bednarski",
             UserName = "supp1@eg.eg",
@@ -36,10 +38,10 @@ public static class TestData
             NormalizedEmail = "SUPP1@EG.EG",
             RegistrationDate = new DateTime(2024, 1, 1)
         });
+        db.SaveChanges();
 
         db.Customers.Add(new Customer
         {
-            Id = CustomerId,
             FirstName = "Jan",
             LastName = "Kowalski",
             UserName = "cust1@eg.eg",
@@ -50,22 +52,24 @@ public static class TestData
             BillingAddressId = CustomerBillingAddressId,
             ShippingAddressId = CustomerShippingAddressId
         });
-
-        db.Categories.Add(new Category { Id = CategoryId, Name = "Computers", Tag = "#computer" });
+        db.Categories.Add(new Category { Name = "Computers", Tag = "#computer" });
+        db.SaveChanges();
 
         db.Products.AddRange(
             new Product
             {
-                Id = MonitorId, Name = "Monitor Dell 32", Description = "Monitor 32 cale",
+                Name = "Monitor Dell 32", Description = "Monitor 32 cale",
                 Price = 1000m, Weight = 20f, CategoryId = CategoryId, SupplierId = SupplierId
             },
             new Product
             {
-                Id = MouseId, Name = "Mysz Logitech", Description = "Mysz bezprzewodowa",
+                Name = "Mysz Logitech", Description = "Mysz bezprzewodowa",
                 Price = 500m, Weight = 0.5f, CategoryId = CategoryId, SupplierId = SupplierId
             });
+        db.SaveChanges();
 
-        db.StationaryStores.Add(new StationaryStore { Id = StoreId, Name = "Sklep Centralny", AddressId = StoreAddressId });
+        db.StationaryStores.Add(new StationaryStore { Name = "Sklep Centralny", AddressId = StoreAddressId });
+        db.SaveChanges();
 
         db.ProductStocks.AddRange(
             new ProductStock { ProductId = MonitorId, StationaryStoreId = StoreId, Quantity = 10 },
@@ -74,9 +78,9 @@ public static class TestData
         db.SaveChanges();
     }
 
-    private static Address NewAddress(int id, string street, string number) => new()
+    private static Address NewAddress(string street, string number) => new()
     {
-        Id = id, Street = street, BuildingNumber = number, City = "Częstochowa",
+        Street = street, BuildingNumber = number, City = "Częstochowa",
         PostalCode = "42-200", Country = "Polska"
     };
 }

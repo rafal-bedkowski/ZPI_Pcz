@@ -2,7 +2,7 @@
 
 ## 1. Zakres i mapowanie kryteriów akceptacji na testy
 
-Zaimplementowano US-01-01 do US-01-14. Kod został zaakceptowany przez Lidera, a wszystkie stories mają status „Zweryfikowana” na providerze SQLite. Kryteria dotyczące SQL Server pozostają niezweryfikowane — testy i migracja na tym providerze czekają na instancję udostępnioną przez prowadzącego (pkt 6).
+Zaimplementowano US-01-01 do US-01-14. Kod został zaakceptowany przez Lidera. Kryteria dotyczące SQL Server zweryfikowano na lokalnej instancji SQL Server 2025 Express (SQLEXPRESS) — testy `SqlServerProviderTests` i zastosowanie migracji (pkt 4). Nie sprawdzono jedynie wymagań prowadzącego co do providera (pkt 6).
 
 Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M” oznacza weryfikację ręczną opisaną w pkt 4.
 
@@ -16,29 +16,29 @@ Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M”
 | US-01-03 | 1–3 | `ModelTests.US_01_03_*` |
 | US-01-04 | 1–3 | `ModelTests.US_01_04_*` |
 | | 4 | `ModelTests.US_01_04_TotalAmount_IsSumOfFrozenUnitPriceTimesQuantity` |
-| | 5 | `DbContextTests.US_01_04_OrderWithFractionalPrices_KeepsExactTotalAfterRoundTrip` (SQLite); `SqlServerProviderTests.US_01_10_SqlServer_TotalAmountIsExactAfterRoundTrip` (SQL Server, pomijany bez instancji) |
+| | 5 | `DbContextTests.US_01_04_OrderWithFractionalPrices_KeepsExactTotalAfterRoundTrip` (SQLite); `SqlServerProviderTests.US_01_10_SqlServer_TotalAmountIsExactAfterRoundTrip` (SQL Server, pomijany bez zmiennej `WEBSTORE_TEST_SQLSERVER`) |
 | | 6 | `OrderServiceTests.US_01_11_ProductPriceChange_DoesNotAffectExistingOrder` |
 | | 7 | `InvoiceServiceTests.US_01_12_InvoiceTotalAmount_IsComputedFromOrderAndRefreshedAfterOrderChange` |
 | US-01-05 | 1 | `ModelTests.US_01_05_StationaryStore_HasExactlyTheRequiredFields` |
 | US-01-06 | 1–5 | `DbContextTests.US_01_06_*` (kontekst, relacje 1:N, dwa adresy klienta, 1:1, klucz złożony, TPH) |
-| | 6 | `DbContextTests.US_01_06_ProductWithMissingCategoryOrSupplier_ViolatesForeignKey` (SQLite), `SqlServerProviderTests.US_01_10_SqlServer_MissingForeignKeyIsRejected` (SQL Server, pomijany) |
+| | 6 | `DbContextTests.US_01_06_ProductWithMissingCategoryOrSupplier_ViolatesForeignKey` (SQLite), `SqlServerProviderTests.US_01_10_SqlServer_MissingForeignKeyIsRejected` (SQL Server, pomijany bez zmiennej) |
 | | 7 | `ArchitectureTests.US_01_06_ModelServicesViewModels_DoNotReferenceDatabaseProviders` |
 | US-01-07 | 1–3 | `ConfigurationTests.US_01_07_*` (domyślny SQLite, SQL Server z konfiguracji, brak ciągu połączenia, nieobsługiwany provider z listą wartości) |
-| | 4 | `DbContextTests.US_01_07_PriceOperations_GiveCorrectResultsOnSqlite`, `SqlServerProviderTests.US_01_10_SqlServer_PriceOperationsMatchSqlite` (pomijany bez instancji) |
+| | 4 | `DbContextTests.US_01_07_PriceOperations_GiveCorrectResultsOnSqlite`, `SqlServerProviderTests.US_01_10_SqlServer_PriceOperationsMatchSqlite` (pomijany bez zmiennej `WEBSTORE_TEST_SQLSERVER`) |
 | | 5, 7 | `ArchitectureTests.US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword`, `US_01_07_GitIgnore_ExcludesSqliteDatabaseFile` |
 | | 6 | `MigrationTests.US_01_07_SqliteMigration_CreatesDatabaseFileWithAllTablesAndForeignKeys`; M: `dotnet ef database update` tworzy `WebStore.Web/webstore.db` |
 | | 8 | `MigrationTests.US_01_07_SqliteMigrations_AreUpToDateWithModel`; M: kolejna migracja jest pusta |
 | | 9 | M: katalog `WebStore.Web` tylko do odczytu → `SQLite Error 14: unable to open database file`, plik i historia migracji nie powstają |
-| | 10, 12 | Nie sprawdzone: brak instancji SQL Server (migracja SQL Server wygenerowana, nie zastosowana) |
+| | 10, 12 | M: `dotnet ef database update --context SqlServerDbContext` na SQLEXPRESS stosuje migrację `InitialSqlServer` bez błędów; `has-pending-model-changes` — brak zmian; `database drop` usuwa bazę |
 | | 11 | `MigrationTests.US_01_07_SqlServerMigrations_ExistAndAreUpToDateWithModel`; M: kolejna migracja jest pusta |
 | US-01-08 | 1–7 | `ConventionTests.US_01_08_*` |
-| US-01-09 | 1–11 | `ProductServiceTests.US_01_09_*` |
+| US-01-09 | 1–11 | `ProductServiceTests.US_01_09_*` (pkt 11 na SQL Server: `SqlServerProviderTests.US_01_09_SqlServer_ProductService_PriceFiltersReturnOnlyMatchingProducts`) |
 | | 12 | `ProductServiceTests.US_01_09_AddOrUpdateProduct_NullImage_KeepsExistingImage`, `US_01_09_AddOrUpdateProduct_NewImage_ReplacesExistingImage` |
 | US-01-10 | 1, 2 | `ArchitectureTests.US_01_10_TestProject_UsesXunitV3`, `Startup.cs` |
 | | 3, 6, 7, 8 | `SeedDataTests.US_01_10_*` (dane startowe, wymuszanie kluczy obcych, izolacja per test), asercje liczby w `ProductServiceTests`, `OrderServiceTests` |
 | | 4, 5 | M: `dotnet test` (kod wyjścia 0), `dotnet test --filter-class` |
-| | 9 | `SqlServerProviderTests` (uruchamiane po ustawieniu `WEBSTORE_TEST_SQLSERVER`; niezweryfikowane w tym środowisku) |
-| US-01-11 | 1–5, 9–11 | `OrderServiceTests.US_01_11_*` (pkt 10 także `US_01_11_TotalAmount_FractionalPrices_IsExactAfterSaveAndLoad`) |
+| | 9 | `SqlServerProviderTests` (uruchamiane po ustawieniu `WEBSTORE_TEST_SQLSERVER`; wynik w pkt 4) |
+| US-01-11 | 1–5, 9–11 | `OrderServiceTests.US_01_11_*` (pkt 10 także `US_01_11_TotalAmount_FractionalPrices_IsExactAfterSaveAndLoad` oraz na SQL Server `SqlServerProviderTests.US_01_11_SqlServer_OrderService_TotalAmountWithFractionalPricesIsExactAfterSaveAndLoad`) |
 | | 6 | `US_01_11_NonPositiveQuantity_IsRejectedWithValidationErrorAndNothingSaved` |
 | | 7 | `US_01_11_InvalidOrUnknownProduct_IsRejectedWithValidationErrorAndNothingSaved` |
 | | 8 | `US_01_11_EmptyItemList_IsRejectedWithValidationErrorAndNothingSaved` |
@@ -74,17 +74,18 @@ PATH musi zawierać `dotnet` (macOS: `/usr/local/share/dotnet` lub `/opt/homebre
 - Build: `dotnet build` w katalogu głównym; nie wymaga Node.js.
 - Klient: `npm install` i `npm run build` w `WebStore.Web/ClientApp` (wynik w `WebStore.Web/wwwroot`), `npm run dev` do pracy nad nim; `dotnet publish WebStore.Web -c Release` buduje klienta automatycznie (wymaga Node.js).
 - Serwer: `dotnet run --project WebStore.Web`; bez zbudowanego klienta strona główna (HTTP 200) wyświetla instrukcję jego zbudowania.
-- Migracje: `dotnet tool restore`, potem `dotnet ef database update --context SqliteDbContext --project WebStore.DAL --startup-project WebStore.Web` (plik `webstore.db` powstaje w `WebStore.Web`). Dla SQL Server: `--context SqlServerDbContext` ze zmienną `ConnectionStrings__SqlServer` (niezastosowane, brak instancji). Nowa migracja: `dotnet ef migrations add Nazwa --context <kontekst> --project WebStore.DAL --startup-project WebStore.Web --output-dir Migrations/Sqlite` (lub `/SqlServer`).
+- Migracje: `dotnet tool restore`, potem `dotnet ef database update --context SqliteDbContext --project WebStore.DAL --startup-project WebStore.Web` (plik `webstore.db` powstaje w `WebStore.Web`). Dla SQL Server: `--context SqlServerDbContext` ze zmienną `ConnectionStrings__SqlServer` (sprawdzone na SQLEXPRESS). Nowa migracja: `dotnet ef migrations add Nazwa --context <kontekst> --project WebStore.DAL --startup-project WebStore.Web --output-dir Migrations/Sqlite` (lub `/SqlServer`).
 - Testy: `dotnet test` (filtr: `dotnet test --filter-class WebStore.Tests.ProductServiceTests` lub `--filter-method`).
 - SQL Server (opcjonalnie): `Database__Provider=SqlServer` oraz `ConnectionStrings__SqlServer` ze zmiennej środowiskowej lub `dotnet user-secrets` (projekt Web ma `UserSecretsId`); testy SQL Server: zmienna `WEBSTORE_TEST_SQLSERVER` z ciągiem połączenia bez nazwy bazy.
 
 ## 4. Wynik testów i weryfikacji
 
-- `dotnet test`: 113 testów, 110 zaliczonych, 0 niezaliczonych, 3 pominięte (`SqlServerProviderTests` — brak instancji SQL Server). Kod wyjścia 0 na macOS i na Windowsie.
+- `dotnet test` bez zmiennej `WEBSTORE_TEST_SQLSERVER`: 115 testów, 110 zaliczonych, 0 niezaliczonych, 5 pominiętych (`SqlServerProviderTests`). Kod wyjścia 0 na macOS i na Windowsie.
+- `dotnet test` ze zmienną `WEBSTORE_TEST_SQLSERVER` (SQL Server 2025 Express, `Server=localhost\SQLEXPRESS`, Windows): 115 testów, 115 zaliczonych, 0 niezaliczonych, 0 pominiętych. Po przebiegu w instancji nie zostają bazy `WebStoreTests_*`.
 - `dotnet build --no-incremental`: 0 błędów, 0 ostrzeżeń.
 - `dotnet list package --deprecated --vulnerable`: brak przestarzałych i podatnych pakietów.
 - `dotnet run --project WebStore.Web`: strona główna zwraca HTTP 200; bez zbudowanego klienta — 200 z instrukcją jego zbudowania.
-- SQL Server: niezweryfikowane (brak instancji) — wynik nieznany.
+- SQL Server: migracja `InitialSqlServer` zastosowana na pustej bazie SQLEXPRESS bez błędów, model zgodny ze snapshotem, baza testowa usunięta poleceniem `dotnet ef database drop`.
 - `dotnet build` i `dotnet test` z PATH bez Node.js (bez `node_modules`): przechodzą, 0 ostrzeżeń.
 - `dotnet publish -c Release`: buduje klienta (`wwwroot/index.html` i `assets` w katalogu publikacji); bez Node.js w PATH kończy się błędem „Do opublikowania klienta React wymagany jest Node.js…”.
 - Linter: w projekcie nie skonfigurowano osobnego lintera; analizatory kompilatora i xunit nie zgłaszają ostrzeżeń.
@@ -109,8 +110,10 @@ Decyzje:
 
 ## 6. Stan otwarty: SQL Server
 
-Status wariantu SQL Server jest nieznany — nie był uruchamiany na żadnej instancji. Decyzja Lidera: weryfikacja czeka na instancję udostępnioną przez prowadzącego; do tego czasu sprint 1 pozostaje otwarty.
+Wariant SQL Server przechodzi wszystkie testy i migrację na lokalnej instancji (pkt 4). Dane startowe testów nie zawierają jawnych `Id` (nadaje je baza), więc działają tak samo na SQLite i SQL Server.
 
-- Niezweryfikowane: migracja SQL Server (US-01-07 pkt 10 i 12) oraz testy `SqlServerProviderTests` (US-01-04 pkt 5, US-01-06 pkt 6, US-01-07 pkt 4, US-01-10 pkt 9).
-- Znane ryzyko: `TestData.Seed` wstawia jawne `Id` do kolumn IDENTITY, co na SQL Server prawdopodobnie wymaga poprawki przy pierwszym uruchomieniu.
-- Brakuje testów usług na SQL Server (US-01-09 pkt 11, US-01-11 pkt 10) — do dodania po uzyskaniu instancji.
+Ustalenie: na Windowsie używamy SQL Server (Express, instancja `SQLEXPRESS`; provider wybierany przez `Database__Provider=SqlServer`, ciąg połączenia w `ConnectionStrings__SqlServer` ze zmiennej środowiskowej lub user-secrets, nigdy w repozytorium), na macOS SQLite (domyślny).
+
+Niezweryfikowane: wariant SQL Server uruchomiono tylko na SQL Server 2025 Express z Windowsa; nie sprawdzono innej wersji ani instancji prowadzącego.
+
+Pytanie do Lidera: czy prowadzący wymaga SQL Server tam, gdzie projekt będzie oceniany (wtedy uruchomienie na jego instancji pozostaje do wykonania), czy wystarczy domyślny SQLite?

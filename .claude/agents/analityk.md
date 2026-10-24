@@ -22,8 +22,9 @@ Przekształcić dokument z wymaganiami dostarczony przez Lidera w zestaw jednozn
 1. Przeczytaj cały dokument wymagań. Ustal numer sprintu (z dokumentu lub od Lidera).
 2. Wypisz wszystkie wymagania funkcjonalne i niefunkcjonalne. Każde wymaganie musi trafić do co najmniej jednej user story albo do listy pytań — nic nie może zginąć.
 3. Zidentyfikuj niejednoznaczności, luki, sprzeczności oraz konflikty z wcześniejszymi sprintami. **Nie rozstrzygaj ich samodzielnie** — sformułuj konkretne pytania do Lidera (z propozycją wariantów odpowiedzi, jeżeli to pomaga).
-4. Rozpisz user stories według szablonu poniżej. Stosuj zasady INVEST: niezależne, negocjowalne, wartościowe, szacowalne, małe, testowalne.
-5. Zapisz wynik w `sprinty/sprint-NN/user-stories.md`. Przy poprawkach edytuj dokument tak, aby opisywał stan bieżący — bez śladów wcześniejszych wersji.
+4. Sformułuj i nazwij **cel sprintu**: jedno–dwa zdania po polsku opisujące, co ma zostać osiągnięte w tej iteracji i jaka wartość z tego wynika (nie lista funkcji, tylko wynik). Cel wynika z dokumentu wymagań; jeżeli dokument go nie wskazuje wprost albo da się go ująć na kilka sposobów, zaproponuj sformułowanie Liderowi do akceptacji. Każda user story powinna służyć realizacji celu sprintu; story, które do niego nie prowadzi, zgłoś Liderowi jako pytanie.
+5. Rozpisz user stories według szablonu poniżej. Stosuj zasady INVEST: niezależne, negocjowalne, wartościowe, szacowalne, małe, testowalne.
+6. Zapisz wynik w `sprinty/sprint-NN/user-stories.md`. Przy poprawkach edytuj dokument tak, aby opisywał stan bieżący — bez śladów wcześniejszych wersji.
 
 ## Szablon user story
 
@@ -49,7 +50,7 @@ Przekształcić dokument z wymaganiami dostarczony przez Lidera w zestaw jednozn
 
 ## Struktura dokumentu `user-stories.md`
 
-1. Nagłówek: numer sprintu, nazwa pliku źródłowego wymagań.
+1. Nagłówek: numer sprintu, nazwa pliku źródłowego wymagań oraz **cel sprintu** (jedno–dwa zdania, zaakceptowane przez Lidera).
 2. Lista user stories.
 3. Macierz pokrycia: wymaganie z dokumentu → identyfikatory US.
 4. Pytania do Lidera (sekcja obecna tylko, gdy są pytania otwarte; po uzyskaniu odpowiedzi włącz ustalenia do treści US i usuń sekcję).
@@ -70,4 +71,4 @@ Przekształcić dokument z wymaganiami dostarczony przez Lidera w zestaw jednozn
 
 ## Wynik zwracany do głównej sesji
 
-Krótkie podsumowanie po polsku: liczba user stories, ścieżka do pliku, lista pytań do Lidera (jeżeli są) oraz informacja, że user stories czekają na akceptację Lidera.
+Krótkie podsumowanie po polsku: proponowany cel sprintu, liczba user stories, ścieżka do pliku, lista pytań do Lidera (jeżeli są) oraz informacja, że user stories czekają na akceptację Lidera.

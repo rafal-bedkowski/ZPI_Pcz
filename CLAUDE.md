@@ -34,7 +34,7 @@ WebStore.Web/                aplikacja ASP.NET Core serwująca klienta React (Cl
 WebStore.Tests/              testy jednostkowe xunit.v3
 ```
 
-Zależności projektów: DAL→Model; ViewModels→Model; Services→Model, DAL, ViewModels; Web→Model, DAL, ViewModels, Services; Tests→Services, Model, DAL.
+Zależności projektów: DAL→Model; ViewModels→Model; Services→Model, DAL, ViewModels; Web→Model, DAL, ViewModels, Services; Tests→Services, Model, DAL, Web (testy integracyjne API).
 
 ## Stos technologiczny
 
@@ -50,6 +50,19 @@ Uzgodniony z Liderem na podstawie wymagań sprintu 1:
 - Wersje pakietów ustala programista poleceniem `dotnet package search` i wybiera aktualne, nieprzestarzałe wydania stabilne.
 - Hasła i ciągi połączenia nie trafiają do repozytorium (user-secrets lub zmienne środowiskowe).
 - Instalacje narzędzi wykonywane są wyłącznie po akceptacji Lidera.
+
+### Web API (wymagania sprintu 2)
+
+- REST API w `WebStore.Web`: `AddControllers` i trasy atrybutowe, bez Antiforgery i bez CORS; serializacja `System.Text.Json`; kontrolery nie zawierają logiki biznesowej (ta pozostaje w usługach).
+- Uwierzytelnianie: ASP.NET Core Identity i token JWT (walidacja `Issuer`, `Audience`, czas w UTC, ważność 20 minut). Wszystkie endpointy poza `AccountApi/Login` wymagają tokenu; role (Admin, Customer) nie ograniczają dostępu. Logowanie przyjmuje formularz i JSON; błędne dane to 401 z komunikatem po polsku, bez blokady konta.
+- Klucz JWT: w Development losowy przy każdym starcie, poza Development wymagany z konfiguracji (user-secrets lub zmienna środowiskowa); jego brak przerywa start z czytelnym błędem.
+- Konta testowe (`admin@webstore.local`, `customer@webstore.local`) powstają tylko w Development; hasło pochodzi z ustawienia `Seed:TestAccountPassword` (user-secrets lub zmienna środowiskowa), a przy jego braku konta nie są tworzone.
+- Swagger: Swashbuckle.AspNetCore, wyłącznie w Development, adresy `/swagger`, obsługa tokenu Bearer. Przekierowanie na HTTPS włączone.
+- Kody odpowiedzi: 404 dla nieistniejącego zasobu, 400 dla błędów walidacji i nieistniejących powiązań, 409 dla drugiej faktury do tego samego zamówienia, `POST` → 201 z `Location`, `PUT` → 200, `DELETE` → 204; `POST` z niepustym `Id` i `PUT` bez `Id` są odrzucane (400).
+- `DELETE` produktu ukrywa go flagą w encji `Product` (migracje dla SQLite i SQL Server); ukryty produkt nie jest zwracany przez `GET` ani przyjmowany w zamówieniu.
+- Proxy deweloperskie klienta dla `/api` i `/swagger`: `server.proxy` w `vite.config.js`.
+- Testy API: integracyjne (`WebApplicationFactory`) w `WebStore.Tests`.
+- Docelowo SQL Server ma zostać bazą podstawową (SQLite jako wariant, m.in. dla macOS); zmiana domyślnego providera nie wchodzi w zakres sprintu 2.
 
 ## Środowisko
 

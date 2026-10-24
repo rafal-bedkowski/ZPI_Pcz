@@ -58,6 +58,16 @@ dotnet run --project WebStore.Web
 
 Klient React: `npm install` i `npm run dev` w `WebStore.Web/ClientApp` (praca nad klientem) lub `npm run build` (wynik w `WebStore.Web/wwwroot`).
 
+### Testy
+
+Testy z folderu `WebStore.Tests/UnitTests` (klasy `ProductServiceUnitTests`, `OrderServiceUnitTests`, `InvoiceServiceUnitTests`, `StoreServiceUnitTests`, `AddressServiceUnitTests` dziedziczące po `BaseUnitTests`) korzystają z danych startowych z `Extensions.SeedData` (źródło: `Infrastructure/TestData`); każdy test ma własną bazę SQLite w pamięci. Poniższe polecenia wykonuje się w katalogu głównym repozytorium; na komputerach, na których Smart App Control blokuje Debug (patrz wyżej), dodaj `-c Release` (poniżej w tej postaci).
+
+- wszystkie testy: `dotnet test -c Release`,
+- pojedyncza metoda: `dotnet test -c Release --filter-method WebStore.Tests.UnitTests.ProductServiceUnitTests.UpdateProductTest`,
+- cała klasa: `dotnet test -c Release --filter-class WebStore.Tests.UnitTests.ProductServiceUnitTests`.
+
+Runner Microsoft.Testing.Platform (xunit.v3) wymaga w `--filter-method` i `--filter-class` pełnej nazwy z przestrzenią nazw (dla metody także z nazwą klasy); sama krótka nazwa (np. `UpdateProductTest`) nie wybiera żadnego testu, a polecenie kończy się kodem wyjścia 8. W tej konfiguracji działa też krótki filtr z instrukcji laboratorium, np. `dotnet test -c Release --filter UpdateProductTest` lub `--filter ProductServiceUnitTests`.
+
 ## Baza danych
 
 Domyślnym providerem jest SQLite (`Database:Provider` = `Sqlite` w `appsettings.json`). SQL Server włącza się wyłącznie konfiguracją użytkownika poza repozytorium; ciąg połączenia SQL Server ani hasło nie mogą trafić do żadnego pliku repozytorium (ani do `appsettings*.json`, README, skryptów, ani do kodu).

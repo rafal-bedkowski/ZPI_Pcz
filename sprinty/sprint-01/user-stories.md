@@ -373,6 +373,49 @@ Wariant (b) — SQL Server (wymagany na Windowsie):
 
 ---
 
+### US-01-16: Testy jednostkowe w strukturze z instrukcji laboratorium
+
+**Status:** Zweryfikowana
+**Źródło:** Rozdz. 5.2 (klasa `Extensions`, `SeedData`), rozdz. 5.3 pkt 1–3 (`BaseUnitTests`, `ProductServiceUnitTests`, uruchamianie z filtrem), rozdz. 5.4 (testy czterech usług); decyzja Lidera (opcja A: nowa struktura obok istniejących testów)
+**Priorytet:** Średni
+
+**Jako** programista
+**chcę** mieć w `WebStore.Tests` folder `UnitTests` z klasą bazową `BaseUnitTests`, rozszerzeniem `SeedData` i klasami `<Usługa>UnitTests` o nazwach metod z instrukcji
+**aby** projekt testów był zgodny ze strukturą wskazaną w instrukcji laboratorium, bez naruszania istniejących testów z US-01-08–US-01-14.
+
+**Kryteria akceptacji:**
+
+Struktura:
+1. **Zakładając, że** projekt `WebStore.Tests` istnieje, **gdy** zostanie sprawdzony folder `UnitTests`, **wtedy** zawiera abstrakcyjną klasę `BaseUnitTests` (przestrzeń nazw `WebStore.Tests.UnitTests`) z publicznym konstruktorem przyjmującym `ApplicationDbContext` oraz chronionym polem tylko do odczytu `DbContext` przechowującym przekazaną instancję.
+2. **Zakładając, że** folder `UnitTests` istnieje, **gdy** zostaną sprawdzone jego klasy, **wtedy** są to dokładnie: `ProductServiceUnitTests`, `OrderServiceUnitTests`, `InvoiceServiceUnitTests`, `StoreServiceUnitTests`, `AddressServiceUnitTests` (oprócz `BaseUnitTests`); każda dziedziczy po `BaseUnitTests`, przyjmuje w konstruktorze `ApplicationDbContext` i interfejs odpowiedniej usługi (`IProductService`, `IOrderService`, `IInvoiceService`, `IStoreService`, `IAddressService`) wstrzykiwane z kontenera zależności z `Startup`.
+3. **Zakładając, że** w projekcie testów istnieje klasa `Extensions` (plik `Extensions.cs`), **gdy** zostanie sprawdzona, **wtedy** udostępnia metodę rozszerzającą `SeedData` dla `IServiceCollection`, wywoływaną z konfiguracji testów (`Startup`).
+
+Dane przykładowe (`SeedData`):
+4. **Zakładając, że** test wykorzystujący bazę zaczyna działanie, **gdy** zostaną odczytane dane z bazy, **wtedy** baza zawiera dostawcę (Id 1), kategorię (Id 1) oraz produkty „Monitor Dell 32” (Id 1, cena 1000) i „Mysz Logitech” (Id 2, cena 500), czyli dane opisane w instrukcji (rozdz. 5.2).
+5. **Zakładając, że** dane startowe testów definiuje już `TestData` (US-01-10 pkt 3), **gdy** zostanie sprawdzony kod testów, **wtedy** dane przykładowe nie są zdefiniowane drugi raz: `SeedData` korzysta z jednego źródła danych (`TestData`), a testy z US-01-08–US-01-14 oraz `SeedDataTests` przechodzą bez zmiany ich oczekiwań.
+6. **Zakładając, że** każdy test ma własną bazę SQLite in-memory (US-01-10 pkt 6), **gdy** nowy test zmienia dane (np. dodaje lub aktualizuje produkt), **wtedy** zmiana nie jest widoczna w żadnym innym teście, niezależnie od kolejności i równoległości uruchomienia.
+
+Scenariusze testów (nazwy metod bez identyfikatorów US):
+7. **Zakładając, że** `ProductServiceUnitTests` istnieje, **gdy** zostanie sprawdzona, **wtedy** zawiera metody `GetProductTest` (pobranie „Monitor Dell 32” zwraca niepusty wynik), `GetMultipleProductsTest` (filtr `Id` od 1 do 2 zwraca dokładnie 2 elementy), `GetAllProductsTest` (brak filtra zwraca liczbę produktów równą liczbie produktów w bazie, odczytanej z `DbContext`, a nie porównanie wyniku z samym sobą), `AddNewProductTest` (dodanie produktu „MacBook Pro” z `CategoryId` = 1 i `SupplierId` = 1 zwraca produkt o tej nazwie, a liczba produktów w bazie rośnie o 1) oraz `UpdateProductTest` (aktualizacja produktu o `Id` = 1 z ceną 2000 zwraca nazwę „Monitor Dell 32” i cenę 2000, a liczba produktów w bazie nie zmienia się).
+8. **Zakładając, że** `OrderServiceUnitTests`, `InvoiceServiceUnitTests`, `StoreServiceUnitTests` i `AddressServiceUnitTests` istnieją, **gdy** zostaną sprawdzone, **wtedy** każda z nich zawiera dokładnie po jednej metodzie z pełnego zestawu pięciu (wszystkie pięć usług udostępnia dodanie lub aktualizację, pobranie jednego elementu po filtrze oraz pobranie listy z opcjonalnym filtrem, więc żaden element zestawu nie jest pomijany), o nazwach: `GetOrderTest`, `GetMultipleOrdersTest`, `GetAllOrdersTest`, `AddNewOrderTest`, `UpdateOrderTest` (analogicznie: `…Invoice…`, `…Store…`, `…Address…`; liczba mnoga: `GetMultipleInvoicesTest`, `GetAllInvoicesTest`, `GetMultipleStoresTest`, `GetAllStoresTest`, `GetMultipleAddressesTest`, `GetAllAddressesTest`).
+9. **Zakładając, że** metody z pkt 8 istnieją, **gdy** zostaną uruchomione, **wtedy** pokrywają wyłącznie ścieżki pozytywne istniejących funkcji usług: pobranie jednego elementu po filtrze (wynik niepusty i zgodny z filtrem), pobranie kilku elementów po filtrze (liczba równa oczekiwanej), pobranie wszystkich (liczba równa liczbie rekordów w bazie odczytanej z `DbContext`), dodanie nowego rekordu (zwrócony view model zawiera zapisane dane, liczba rekordów w bazie rośnie o 1) oraz aktualizacja istniejącego rekordu (zwrócony view model zawiera zmienione dane, liczba rekordów nie zmienia się). Dane potrzebne scenariuszom, których nie ma w danych startowych (np. zamówienie, faktura), są tworzone w teście lub w `TestData` bez zmiany wyników istniejących testów.
+10. **Zakładając, że** w instrukcji metoda testowa zakłada zachowanie różne od faktycznych zasad usług z sekcji „Uwagi ogólne” (np. `null` dla braku dopasowania, wyjątek „nie znaleziono”), **gdy** test jest pisany, **wtedy** jest dostosowany do faktycznych sygnatur i zasad usług, a nie odwrotnie; scenariusze negatywne (wyjątki, `null`, walidacja) pozostają w istniejących testach i nie są duplikowane.
+
+Uruchamianie i brak regresji:
+11. **Zakładając, że** nowe testy zostały dodane, **gdy** zostanie wykonane `dotnet test`, **wtedy** wszystkie testy (istniejące i nowe) kończą się wynikiem „Passed”, polecenie zwraca kod wyjścia 0, a testy wariantu SQL Server są pomijane, dopóki zmienna `WEBSTORE_TEST_SQLSERVER` nie zawiera ciągu połączenia.
+12. **Zakładając, że** nowe testy zostały dodane, **gdy** zostanie porównana lista testów przed i po zmianie, **wtedy** każdy dotychczasowy test (w tym o nazwach `US_01_xx_…`) istnieje pod tą samą nazwą i klasą, przechodzi, a jego powiązanie z kryteriami akceptacji (US-01-08–US-01-14) nie zmieniło się.
+13. **Zakładając, że** w projekcie testów występują klasy o nazwach `ProductServiceTests` i `ProductServiceUnitTests` (analogicznie dla pozostałych usług), **gdy** projekt zostanie skompilowany, **wtedy** kompilacja kończy się 0 błędów i 0 ostrzeżeń, a w projekcie nie ma dwóch klas o tej samej pełnej nazwie.
+14. **Zakładając, że** w projekcie istnieją testy konwencji i architektury (`ConventionTests`, `ArchitectureTests`), **gdy** zostaną uruchomione po dodaniu nowych klas, **wtedy** przechodzą bez osłabiania ich asercji; nazwy nowych metod testowych nie zawierają identyfikatorów US.
+15. **Zakładając, że** uruchamiane jest `dotnet test` z filtrem na pojedynczą metodę (np. `UpdateProductTest`) lub klasę (np. `ProductServiceUnitTests`), **gdy** filtr wskazuje nowy test, **wtedy** uruchamiane są wyłącznie wskazane testy: w runnerze Microsoft.Testing.Platform (xunit.v3) odpowiednikami `--filter {nazwa}` z instrukcji są `--filter-method` i `--filter-class` (nazwa klasy w pełnej postaci, np. `WebStore.Tests.UnitTests.ProductServiceUnitTests`, o ile runner tego wymaga).
+16. **Zakładając, że** sprawdzony jest `README`, **gdy** zostanie przeczytana sekcja o testach, **wtedy** obowiązkowo podaje polecenia uruchomienia wszystkich testów, pojedynczej metody i klasy dla nowych testów (z `--filter-method` i `--filter-class`).
+
+Raportowanie:
+17. **Zakładając, że** programista przygotował `raport-implementacji.md`, **gdy** zostanie sprawdzone mapowanie kryteriów na testy, **wtedy** obejmuje ono US-01-16: dla każdego kryterium wskazuje test lub sprawdzenie (kryteria dotyczące struktury i dokumentacji mogą być weryfikowane przeglądem), a dla metod z pkt 7–8 wskazuje, które kryteria US-01-09 i US-01-11–US-01-14 pokrywają (pkt 2/3/8/9/10 i odpowiedniki).
+
+**Uwagi:** Zależy od US-01-08–US-01-14 (usługi) i US-01-10 (infrastruktura testów, `Startup`, `TestData`). Wymaganie z instrukcji jest dodane jako osobna story, aby nie zmieniać zweryfikowanej US-01-10; istniejące testy pozostają bez zmian. `SeedData` ma zachować jedno źródło danych: dane z instrukcji (dostawca, kategoria, dwa produkty o Id 1 i 2) są podzbiorem `TestData`, więc dublowanie danych nie jest uzasadnione. Instrukcja zakłada xUnit 2.x z wstrzykiwaniem przez konstruktor oraz `dotnet test --filter`; w xunit.v3 na Microsoft.Testing.Platform filtry mają postać `--filter-method` i `--filter-class`. Sposób podpięcia `SeedData` do tworzenia bazy per test jest decyzją implementacyjną programisty, o ile spełnia pkt 4–6.
+
+---
+
 ## Macierz pokrycia
 
 | Wymaganie z dokumentu | Identyfikatory US |
@@ -394,9 +437,15 @@ Wariant (b) — SQL Server (wymagany na Windowsie):
 | 5.1 pkt 1–7 Foldery, view modele, konwencje, BaseService, pakiety | US-01-08 |
 | 5.1 pkt 8 ProductService | US-01-09 |
 | 5.2 Konfiguracja projektu testów, Startup, dane startowe | US-01-10 |
+| 5.2 `Extensions.cs` z rozszerzeniem `SeedData` (dostawca, kategoria, 2 produkty) | US-01-16 pkt 3–6 (dane: US-01-10 pkt 3) |
 | 5.2 Poziomy testów (integracyjne, GUI) | Poza zakresem sprintu |
-| 5.3 Testy jednostkowe ProductService i uruchamianie | US-01-09, US-01-10 |
+| 5.3 pkt 1 Folder `UnitTests`, `BaseUnitTests` | US-01-16 pkt 1–2 |
+| 5.3 pkt 2 `ProductServiceUnitTests` (GetProductTest, GetMultipleProductsTest, GetAllProductsTest, AddNewProductTest, UpdateProductTest) | US-01-16 pkt 7, 10 |
+| 5.3 pkt 3 Uruchamianie testów, filtr po metodzie i klasie | US-01-10 pkt 4–5, US-01-16 pkt 11, 15, 16 |
+| 5.3 Testy jednostkowe ProductService (logika usługi) | US-01-09, US-01-10 |
 | 5.4 OrderService, InvoiceService, StoreService, AddressService + testy | US-01-11, US-01-12, US-01-13, US-01-14 |
+| 5.4 Klasy testowe `<Usługa>UnitTests` w `UnitTests` | US-01-16 pkt 2, 8–10 |
+| Niefunkcjonalne: brak regresji istniejących testów i konwencji | US-01-16 pkt 11–14, 17 |
 | 5.4 Commit & Push | Poza zakresem (czynność Lidera) |
 | Niefunkcjonalne: konwencje nazewnicze (I…, …Service, …Vm), logowanie błędów, walidacja `[Required]` | US-01-08, US-01-09 |
 | Niefunkcjonalne: „dążenie do pokrycia testami jak największej ilości kodu” | US-01-10 (testy usług), bez progu pokrycia |

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WebStore.DAL.EF;
@@ -17,23 +16,14 @@ public class Startup
         services.AddLogging();
 
         // Każdy test dostaje własne połączenie SQLite in-memory (baza istnieje, dopóki połączenie jest otwarte)
-        // wypełnione danymi startowymi.
+        // wypełnione danymi startowymi (SeedData).
         services.AddScoped(_ =>
         {
             var connection = new SqliteConnection("DataSource=:memory:");
             connection.Open();
             return connection;
         });
-        services.AddScoped(sp =>
-        {
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseSqlite(sp.GetRequiredService<SqliteConnection>())
-                .Options;
-            var db = new ApplicationDbContext(options);
-            db.Database.EnsureCreated();
-            TestData.Seed(db);
-            return db;
-        });
+        services.SeedData();
 
         services.AddIdentityCore<User>(o =>
             {

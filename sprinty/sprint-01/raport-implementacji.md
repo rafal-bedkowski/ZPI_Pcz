@@ -2,7 +2,7 @@
 
 ## 1. Zakres i mapowanie kryteriów akceptacji na testy
 
-Zaimplementowano US-01-01 do US-01-14. Po poprawkach wynikających z recenzji status „Zaimplementowana” mają US-01-01, US-01-04, US-01-09, US-01-11 i US-01-12; pozostałe stories zachowują status „Zweryfikowana”. Testy i migracje SQL Server są wstrzymane do zajęć (pkt 6).
+Zaimplementowano US-01-01 do US-01-14. Kod został zaakceptowany przez Lidera, a wszystkie stories mają status „Zweryfikowana” na providerze SQLite. Kryteria dotyczące SQL Server pozostają niezweryfikowane — testy i migracja na tym providerze czekają na instancję udostępnioną przez prowadzącego (pkt 6).
 
 Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M” oznacza weryfikację ręczną opisaną w pkt 4.
 
@@ -63,12 +63,13 @@ Wszystkie testy mają w nazwie identyfikator US (`US_01_xx_...`). Skrót „M”
 - `dotnet-tools.json` — lokalny manifest narzędzi z `dotnet-ef` 10.0.13.
 - `WebStore.Tests/MigrationTests.cs` — testy migracji.
 - `WebStore.Web/ClientApp/*` — minimalny klient React (Vite) z `package.json` i `package-lock.json`.
-- `WebStore.Tests/*` — projekt xunit.v3: `Startup.cs`, `Infrastructure/*` (dane startowe, logger, ścieżki repo) i 11 klas testowych.
+- `WebStore.Tests/*` — projekt xunit.v3: `Startup.cs`, `Infrastructure/*` (dane startowe, logger, ścieżki repo) i 11 klas testowych; filtry ścieżek w `ArchitectureTests` normalizują separator `\` na Windowsie.
+- `README.md`, `setup.ps1`, `setup.sh` — opis projektu i uruchomienia oraz skrypty przygotowania środowiska dla Windowsa i macOS.
 - `sprinty/sprint-01/user-stories.md` — zmiana pola `Status`.
 
 ## 3. Uruchomienie
 
-PATH musi zawierać `dotnet` (`/usr/local/share/dotnet` lub `/opt/homebrew/bin`) oraz Node.js.
+PATH musi zawierać `dotnet` (macOS: `/usr/local/share/dotnet` lub `/opt/homebrew/bin`) oraz — do pracy nad klientem — Node.js. Środowisko przygotowuje `setup.ps1` (Windows) lub `setup.sh` (macOS).
 
 - Build: `dotnet build` w katalogu głównym; nie wymaga Node.js.
 - Klient: `npm install` i `npm run build` w `WebStore.Web/ClientApp` (wynik w `WebStore.Web/wwwroot`), `npm run dev` do pracy nad nim; `dotnet publish WebStore.Web -c Release` buduje klienta automatycznie (wymaga Node.js).
@@ -79,10 +80,11 @@ PATH musi zawierać `dotnet` (`/usr/local/share/dotnet` lub `/opt/homebrew/bin`)
 
 ## 4. Wynik testów i weryfikacji
 
-- `dotnet test`: 113 testów, 110 zaliczonych, 0 niezaliczonych, 3 pominięte (`SqlServerProviderTests` — brak instancji SQL Server). Kod wyjścia 0.
+- `dotnet test`: 113 testów, 110 zaliczonych, 0 niezaliczonych, 3 pominięte (`SqlServerProviderTests` — brak instancji SQL Server). Kod wyjścia 0 na macOS i na Windowsie.
 - `dotnet build --no-incremental`: 0 błędów, 0 ostrzeżeń.
 - `dotnet list package --deprecated --vulnerable`: brak przestarzałych i podatnych pakietów.
-- `dotnet run --project WebStore.Web`: strona główna zwraca HTTP 200.
+- `dotnet run --project WebStore.Web`: strona główna zwraca HTTP 200; bez zbudowanego klienta — 200 z instrukcją jego zbudowania.
+- SQL Server: niezweryfikowane (brak instancji) — wynik nieznany.
 - `dotnet build` i `dotnet test` z PATH bez Node.js (bez `node_modules`): przechodzą, 0 ostrzeżeń.
 - `dotnet publish -c Release`: buduje klienta (`wwwroot/index.html` i `assets` w katalogu publikacji); bez Node.js w PATH kończy się błędem „Do opublikowania klienta React wymagany jest Node.js…”.
 - Linter: w projekcie nie skonfigurowano osobnego lintera; analizatory kompilatora i xunit nie zgłaszają ostrzeżeń.
@@ -99,15 +101,16 @@ Decyzje:
 3. **Dwa konteksty pod migracje.** `SqliteDbContext` i `SqlServerDbContext` dziedziczą po `ApplicationDbContext`, aby migracje obu providerów nie mieszały się w jednym zestawie. Usługi i testy używają `ApplicationDbContext`.
 4. **Adresy klienta.** Unikalne indeksy na `BillingAddressId` i `ShippingAddressId` zapewniają, że rekord adresu nie jest współdzielony.
 5. **Pozycje zamówienia.** Przy aktualizacji zamówienia istniejąca pozycja zachowuje zamrożoną cenę, nowa dostaje aktualną cenę produktu.
-6. **Faktura i walidacja zamówień.** `AddOrUpdateInvoiceVm` nie ma `TotalAmount`; usługa zawsze ustawia kwotę faktury na `TotalAmount` zamówienia (także przy ponownym zapisie). Drugi zapis faktury dla zamówienia kończy się `InvalidOperationException`; brak zamówienia/klienta/adresu daje `KeyNotFoundException`. `OrderService` odrzuca `ValidationException` (przed jakimkolwiek zapisem): pustą listę pozycji, `Quantity <= 0`, `ProductId <= 0` oraz nieistniejące produkty. Aktualizacja produktu z `ImageBytes = null` zachowuje istniejący obraz (`ImageBytes` w `MainProfile` mapowane warunkowo).
+6. **Faktura i walidacja zamówień.** `AddOrUpdateInvoiceVm` nie ma `TotalAmount`; usługa zawsze ustawia kwotę faktury na `TotalAmount` zamówienia (także przy ponownym zapisie). Decyzja Lidera: kwota faktury jest ustalana przy jej zapisie i nie zmienia się sama po zmianie zamówienia — aktualizuje ją dopiero ponowny zapis faktury. Drugi zapis faktury dla zamówienia kończy się `InvalidOperationException`; brak zamówienia/klienta/adresu daje `KeyNotFoundException`. `OrderService` odrzuca `ValidationException` (przed jakimkolwiek zapisem): pustą listę pozycji, `Quantity <= 0`, `ProductId <= 0` oraz nieistniejące produkty. Aktualizacja produktu z `ImageBytes = null` zachowuje istniejący obraz (`ImageBytes` w `MainProfile` mapowane warunkowo).
 7. **Dodatki ponad listę pól.** `Product.ProductStocks`, `Category.Products` (nawigacje konieczne dla relacji), `ProductVm.Id`, `OrderVm.InvoiceId`, `StoreVm.Address`.
 8. **Runner testów.** .NET 10 wymaga w `global.json` ustawienia `test.runner = Microsoft.Testing.Platform`, dlatego pakiety `Microsoft.NET.Test.Sdk` i `xunit.runner.visualstudio` nie są używane.
 9. **AutoMapper.** Decyzja Lidera: AutoMapper 16.2.0 w wariancie Community, bez klucza licencyjnego. Biblioteka działa poprawnie, a ostrzeżenie o braku licencji w logach jest znane i akceptowane. Linia 14.x nie wchodzi w grę, bo ma znaną lukę wysokiej wagi (GHSA-rvv3-g6hj-g44x).
 10. **SQLite w aplikacji.** Plik `webstore.db` jest umieszczany w katalogu projektu `WebStore.Web` (`ContentRootPath`), a `dotnet ef` tworzy go w tym samym miejscu. Aplikacja nie stosuje migracji przy starcie.
-11. W `user-stories.md` zdanie „Wszystkie story mają status „Zaakceptowana”” w uwagach ogólnych jest nieaktualne; nie zmieniałem treści poza polami `Status`.
 
-## 6. Pytania do Lidera
+## 6. Stan otwarty: SQL Server
 
-1. Testy i migracja SQL Server (US-01-07 pkt 10 i 12, US-01-10 pkt 9 oraz pozostałe testy `SqlServerProviderTests`) są wstrzymane do zajęć, na których będzie dostępna instancja. Znane ryzyko: `TestData.Seed` wstawia jawne `Id` do kolumn IDENTITY, co na SQL Server wymaga poprawki przy pierwszym uruchomieniu.
+Status wariantu SQL Server jest nieznany — nie był uruchamiany na żadnej instancji. Decyzja Lidera: weryfikacja czeka na instancję udostępnioną przez prowadzącego; do tego czasu sprint 1 pozostaje otwarty.
 
-Kod czeka na akceptację Lidera. Niczego nie commitowano.
+- Niezweryfikowane: migracja SQL Server (US-01-07 pkt 10 i 12) oraz testy `SqlServerProviderTests` (US-01-04 pkt 5, US-01-06 pkt 6, US-01-07 pkt 4, US-01-10 pkt 9).
+- Znane ryzyko: `TestData.Seed` wstawia jawne `Id` do kolumn IDENTITY, co na SQL Server prawdopodobnie wymaga poprawki przy pierwszym uruchomieniu.
+- Brakuje testów usług na SQL Server (US-01-09 pkt 11, US-01-11 pkt 10) — do dodania po uzyskaniu instancji.

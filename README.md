@@ -1,6 +1,6 @@
 # ZPI
 
-Projekt zespołowy realizowany w ramach przedmiotu ZPI — aplikacja klient–serwer rozwijana iteracyjnie (sprinty) z wykorzystaniem środowiska agentowego Claude Code.
+Projekt zespołowy realizowany w ramach przedmiotu ZPI — aplikacja klient–serwer WebStore rozwijana iteracyjnie (sprinty) z wykorzystaniem środowiska agentowego Claude Code.
 
 ## Workflow
 
@@ -13,15 +13,47 @@ Każdy sprint przebiega sekwencyjnie, a przejście do kolejnego etapu wymaga akc
 
 Szczegółowe zasady projektu znajdują się w [CLAUDE.md](CLAUDE.md), a opisy ról agentów w katalogu [.claude/agents](.claude/agents).
 
+## Stos technologiczny
+
+- **Serwer:** .NET 10 (LTS), C#, ASP.NET Core; wersja SDK przypięta w `global.json`.
+- **Dostęp do danych:** Entity Framework Core 10, AutoMapper 16.
+- **Baza danych:** SQLite (domyślnie) lub SQL Server (wybór w konfiguracji).
+- **Klient:** React 19 + Vite (`WebStore.Web/ClientApp`).
+- **Testy:** xunit.v3, SQLite in-memory.
+
 ## Struktura repozytorium
 
 ```
-wymagania/          dokumenty z wymaganiami na kolejne sprinty
-sprinty/sprint-NN/  user stories, raporty implementacji i recenzji
-.claude/agents/     definicje agentów: analityk, programista, recenzent
-CLAUDE.md           zasady pracy w projekcie
+wymagania/            dokumenty z wymaganiami na kolejne sprinty
+sprinty/sprint-NN/    user stories, raporty implementacji i recenzji
+.claude/agents/       definicje agentów: analityk, programista, recenzent
+WebStore.Model/       encje
+WebStore.DAL/         kontekst EF Core, konfiguracja providera, migracje
+WebStore.ViewModels/  view modele
+WebStore.Services/    usługi i mapowanie AutoMappera
+WebStore.Web/         aplikacja ASP.NET Core z klientem React (ClientApp)
+WebStore.Tests/       testy jednostkowe
+CLAUDE.md             zasady pracy w projekcie
 ```
 
-## Stos technologiczny
+## Uruchomienie
 
-Zostanie ustalony przed pierwszą implementacją.
+Wymagane: Git i .NET SDK 10. Node.js (LTS) jest potrzebny tylko do pracy nad klientem React.
+
+Po sklonowaniu repozytorium skrypt sprawdza narzędzia (instalacja brakujących tylko po potwierdzeniu), a następnie wykonuje restore, build i testy:
+
+- Windows (PowerShell): `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
+- macOS: `./setup.sh`
+
+Ręcznie:
+
+```
+dotnet tool restore
+dotnet build
+dotnet test
+dotnet run --project WebStore.Web
+```
+
+Klient React: `npm install` i `npm run dev` w `WebStore.Web/ClientApp` (praca nad klientem) lub `npm run build` (wynik w `WebStore.Web/wwwroot`).
+
+Testy wariantu SQL Server są pomijane, dopóki zmienna środowiskowa `WEBSTORE_TEST_SQLSERVER` nie zawiera ciągu połączenia do instancji SQL Server.

@@ -26,7 +26,7 @@ Skróty: **S** = Spełnione, **SQL** = część dotycząca SQL Server nie do zwe
 | | 3 build 0/0 | S | `dotnet build --no-incremental`: Ostrzeżenia 0, Błędy 0 |
 | | 4 start i HTTP 200 | S | `dotnet run`, `curl` zwrócił 200 |
 | | 5 jedna wersja platformy i pakiety | S | wszystkie csproj `net10.0` (`US_01_01_AllProjects_ShareTheSameTargetFramework`), EF 10.0.13, AutoMapper 16.2.0, xunit.v3 4.0.2; `--deprecated` i `--vulnerable` czyste |
-| | 6 build bez Node.js, 200 i brak ostrzeżenia bez klienta | S | `ArchitectureTests.US_01_01_WebProject_RunsNpmOnlyDuringPublish`; `dotnet build --no-incremental` i `dotnet test` przeszły (npm uruchamiany tylko przy publish, `WebStore.Web.csproj`); uruchomienie bez `wwwroot` dało 200 i log bez ostrzeżenia (`Program.cs:11-20`) |
+| | 6 build bez Node.js, 200 i brak ostrzeżenia bez klienta | S | `ArchitectureTests.US_01_01_WebProject_RunsNpmOnlyDuringPublish`; `dotnet build --no-incremental` i `dotnet test` przeszły (npm uruchamiany tylko przy publish, `WebStore.Web.csproj`); uruchomienie bez `wwwroot` dało 200 i log bez ostrzeżenia (`Program.cs:11-24`) |
 | | 7 `global.json` | S | `global.json` (SDK 10.0.402), `US_01_01_GlobalJson_PinsSdkMatchingTargetFramework` |
 | | 8 DI, brak API/Swagger | S | `ConfigurationTests.US_01_01_AllSprintServices_AreRegisteredAndResolvable` (z `validateScopes`), `US_01_01_WebProject_HasNoApiControllersNorSwagger`, `Program.cs` |
 | US-01-02 | 1–6 | S | `ModelTests.US_01_02_*`, `Customer.cs`, `Address.cs`, `StationaryStoreEmployee.cs`, `DbContextTests.US_01_06_SharingAnAddressBetweenCustomers_IsRejected` |
@@ -106,20 +106,16 @@ Brak.
 
 ### Drobne
 
-**2. Powielony warunek w `Program.cs`.**
-- Lokalizacja: `WebStore.Web/Program.cs:12-22`.
-- Opis: dwa kolejne bloki `if (clientBuilt)` można połączyć w jeden z `else` (strona z instrukcją).
+**2. Powielony warunek w `Program.cs`.** Poprawione — do potwierdzenia w recenzji.
+- Lokalizacja: `WebStore.Web/Program.cs:13-24`.
+- Opis: dwa kolejne bloki `if (clientBuilt)` połączono w jeden z `else` (strona z instrukcją). Build 0/0, testy 110/0/3, uruchomienie bez `wwwroot` zwraca 200 z instrukcją.
 - Kierunek: kosmetyka, bez wpływu na kryteria.
 
-**3. `TotalAmount` faktury jest odświeżany tylko przy zapisie faktury (US-01-04 pkt 7).**
-- Lokalizacja: `InvoiceService.cs:51-52`, `OrderService.cs` (brak aktualizacji faktury).
-- Opis: po zmianie pozycji zamówienia przez `OrderService` zapisana faktura zachowuje starą kwotę, dopóki nie zostanie ponownie zapisana przez `InvoiceService`. Zgodne z US-01-12 pkt 8 (odświeżenie przy ponownym zapisie), ale „zawsze równe” z US-01-04 pkt 7 nie jest gwarantowane w bazie. Przyjąłem interpretację z US-01-12 pkt 8 jako rozstrzygającą.
-- Kierunek: jeżeli Lider chce ścisłej gwarancji, wyliczać kwotę faktury przy odczycie (`Invoice → Order.TotalAmount`) albo aktualizować fakturę w `OrderService`.
+**3. `TotalAmount` faktury jest ustalany przy zapisie faktury (US-01-04 pkt 7, US-01-12 pkt 8).** Rozstrzygnięte decyzją Lidera — zachowanie poprawne.
+- Lokalizacja: `InvoiceService.cs:51-52`.
+- Opis: po zmianie pozycji zamówienia zapisana faktura zachowuje dotychczasową kwotę, dopóki nie zostanie ponownie zapisana przez `InvoiceService`. Jest to zgodne z treścią US-01-04 pkt 7 i US-01-12 pkt 8 oraz z charakterem faktury jako dokumentu, którego kwota nie zmienia się po wystawieniu.
+- Kierunek: brak zmian w kodzie.
 
 ## 4. Zakres
 
 Nie stwierdzono implementacji spoza zaakceptowanych user stories. Dodatki wymienione w raporcie implementacji (`Product.ProductStocks`, `Category.Products`, `ProductVm.Id`, `OrderVm.InvoiceId`, `StoreVm.Address`, osobne konteksty `SqliteDbContext`/`SqlServerDbContext`, minimalny klient React) są uzasadnione technicznie i nie wprowadzają nowej funkcjonalności. Zmiana `CLAUDE.md` (struktura, stos) jest zgodna z zakresem.
-
-## 5. Pytania do Lidera
-
-1. Uwaga nr 3: czy wystarczy odświeżanie kwoty faktury przy jej zapisie (bieżące zachowanie), czy kwota ma zawsze wynikać z zamówienia także po zmianie zamówienia bez ponownego zapisu faktury?

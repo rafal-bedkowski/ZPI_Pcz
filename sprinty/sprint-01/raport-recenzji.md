@@ -4,19 +4,21 @@
 
 **Zaakceptowano z uwagami.**
 
-Wszystkie 16 user stories ma status `Zweryfikowana`. Brak uwag krytycznych i istotnych. Uwagi dotyczące siły nowych testów (US-01-16) zostały naprawione i potwierdzone próbą mutacyjną; pozostają znane, zaakceptowane przez Lidera uwagi drobne. macOS i instancja prowadzącego nie były sprawdzane (poza zakresem).
+Wszystkie 17 user stories ma status `Zweryfikowana`. Brak uwag krytycznych i istotnych. US-01-17 (klient React w układzie z instrukcji): 16 z 16 kryteriów spełnionych. Pozostają znane, zaakceptowane przez Lidera uwagi drobne 1-5; uwagi drobne 6 i 7 są naprawione. Próg wersji Node.js jest już dopisany w `CLAUDE.md` (zmiana w katalogu roboczym pojawiła się w trakcie recenzji; nie jest to moja zmiana). macOS i instancja prowadzącego nie były sprawdzane (poza zakresem).
 
-Zakres tej recenzji: US-01-16 (nieśledzone `WebStore.Tests/Extensions.cs` i `WebStore.Tests/UnitTests/*`, zmieniony `Startup.cs`, sekcja „Testy” w `README.md`, `raport-implementacji.md`, `user-stories.md`) oraz regresje w pozostałych story. Wcześniejsze zakresy (US-01-07, US-01-10, US-01-15) bez zmian od ostatniej recenzji.
+Zakres tej recenzji: US-01-17 (zmienione `package.json` z polem `engines`, `package-lock.json`, `README.md`, `src/main.jsx`, `src/App.jsx`; nieśledzone `src/index.css`, `src/components/NavMenu.jsx`, `src/pages/Home.jsx`, `Counter.jsx`, `NotFound.jsx`), `raport-implementacji.md`, `user-stories.md` oraz regresje. Wcześniejsze zakresy (US-01-07, US-01-10, US-01-15, US-01-16) bez zmian w kodzie od ostatniej recenzji.
 
 ### Uruchomione weryfikacje
 
-- `dotnet build WebStore.Tests/WebStore.Tests.csproj -c Release --no-incremental`: 0 błędów, 0 ostrzeżeń (projektu Web w Release nie przebudowywano, zgodnie z poleceniem).
-- `dotnet test -c Release --project WebStore.Tests` bez zmiennej: 156 testów, 151 zaliczonych, 0 niezaliczonych, 5 pominiętych (`SqlServerProviderTests`), kod wyjścia 0.
-- To samo z `WEBSTORE_TEST_SQLSERVER` (lokalna instancja SQLEXPRESS, uwierzytelnianie Windows, zaufanie certyfikatowi; zmienna tylko na czas polecenia): 156 zaliczonych, 0 pominiętych, kod 0. Po przebiegu w instancji są tylko bazy systemowe (0 baz `WebStore*`).
-- Filtry (Release): `--filter-method` z pełną nazwą (przestrzeń nazw, klasa, metoda) `UpdateProductTest` daje 1 test, kod 0; `--filter-class` z pełną nazwą `ProductServiceUnitTests` daje 5 testów, kod 0; `--filter-method UpdateProductTest` (sama krótka nazwa) daje 0 testów, kod 8; `--filter-class ProductServiceUnitTests` (krótka nazwa) daje 0 testów, kod 8; `--filter UpdateProductTest` daje 1 test, kod 0; `--filter ProductServiceUnitTests` daje 5 testów, kod 0. Zgodne z README i raportem implementacji.
-- User-secrets: `No secrets configured` (puste, nie ruszane).
-- `git diff` w `WebStore.Tests`: z dotychczasowych plików zmieniony wyłącznie `Startup.cs` (usunięty `using` i przeniesienie rejestracji kontekstu do `Extensions.SeedData`, logika identyczna); `ConventionTests` i `ArchitectureTests` bez zmian; kod produkcyjny bez zmian. 131 dotychczasowych + 25 nowych = 156. Brak duplikatów pełnych nazw klas.
-- `git status`: tylko zmiany tej iteracji; brak plików tymczasowych i kopii zapasowych; `TODO`/`FIXME`/`XXX`/`TBD` tylko w opisach zasad (`CLAUDE.md`, `.claude/agents`) i w teście konwencji; brak zakomentowanego kodu w nowych plikach (komentarze opisują działanie).
+- `npm ci` i `npm run build` w `WebStore.Web/ClientApp` (Node.js v24.20.0, npm 11.19.0): kod 0, 97 modułów, 0 podatności, bez błędów, ostrzeżeń i EBADENGINE; w `wwwroot` powstają `index.html`, `assets/index-*.js`, `assets/index-*.css`.
+- Pole `engines` (`node >=22.22.0`): `npm view react-router engines` -> `>=22.22.0`; w lockfile tylko `react-router` i pakiet główny mają ten próg, pozostałe zależności wymagają mniej (vite i część `@rolldown`/`@oxc`: `^20.19.0 || >=22.12.0`, reszta niżej), więc próg jest minimalnym wspólnym. `git diff`: w `package.json` i `package-lock.json` wyłącznie `engines` oraz zależność `react-router` z jej tranzytywnymi (`@remix-run/route-pattern`, `cookie-es`). Zdanie w `README.md:41` prawdziwe i zwięzłe. `npm ls` spójne z `package.json` (react 19.3.1, react-dom 19.3.1, react-router 8.5.0, vite 8.3.4, @vitejs/plugin-react 6.1.2); `npm audit`: 0 podatności; `npm outdated`: tylko vite 8.3.4 -> 8.3.5 (poprawka patch, opcjonalna, wersje są przypięte); `react-router` 8.5.0 to `latest`.
+- `dotnet build -c Release` solucji: 0 błędów, 0 ostrzeżeń (także z PATH bez Node.js: `which node npm` puste, 0/0).
+- `dotnet build WebStore.Tests -c Release`: 0 błędów, 0 ostrzeżeń. `dotnet test -c Release --project WebStore.Tests`: Smart App Control zablokował świeży `WebStore.Tests.exe` (kod 1, zero testów) także po ponownym buildzie; uruchomiono `dotnet WebStore.Tests.dll` z `bin\Release\net10.0`: 156 testów, 151 zaliczonych, 0 niezaliczonych, 5 pominiętych (`SqlServerProviderTests`, brak `WEBSTORE_TEST_SQLSERVER`). Testy `ConnectionSecretPattern` i `ArchitectureTests` zaliczone (skan obejmuje zmieniony raport i README). Testów SQL Server nie uruchamiano (kod serwera bez zmian).
+- Serwer: sprawdzony w poprzednim przebiegu (`GET /`, `/counter`, nieznany adres -> 200, log bez ostrzeżeń); w ostatnim przeglądzie serwera nie uruchamiano, na porcie 5299 nic nie nasłuchuje (potwierdzone).
+- Zachowanie w przeglądarce: panel przeglądarki (`mcp__Claude_Browser__*`) był niedostępny w tej sesji, więc użyto Microsoft Edge w trybie headless sterowanego protokołem DevTools (skrypt tymczasowy, usunięty): renderowanie `/`, `/counter`, nieznanego adresu; kliknięcia w odnośniki i przycisk; zdarzenia sieciowe. Nie jest to panel wskazany w poleceniu, ale to realna przeglądarka z pełnym wykonaniem JS.
+- Bez `wwwroot` (tymczasowo przeniesiony poza repozytorium, przywrócony): `GET /` -> 200 z tekstem „Klient React nie jest zbudowany. Uruchom 'npm run build'...”; w logu brak ostrzeżenia o `WebRootPath`. (`GET /counter` bez `wwwroot` daje 404 — jak przed zmianą, kryterium 15 dotyczy tylko `/`.)
+- `git status`: poza `sprinty/sprint-01/*`, `README.md` i `CLAUDE.md` (jedna linia o Node.js) zmienione wyłącznie pliki w `WebStore.Web/ClientApp`; serwer, usługi, baza i istniejące testy bez zmian.
+- User-secrets: `No secrets configured`; w instancji SQLEXPRESS 0 baz `WebStore*`; `git status` bez plików tymczasowych i kopii; `TODO`/`FIXME`/`XXX`/`TBD` poza opisami zasad i testem konwencji — brak; w `src` brak `fetch`, `XMLHttpRequest`, `axios`, `localStorage`, `sessionStorage`, `console.`.
 
 ### Ręczny przegląd pod kątem ciągów połączenia i haseł (całe repozytorium)
 
@@ -30,6 +32,29 @@ Przeszukano (bez rozróżniania wielkości liter) słowa kluczowe ciągów poł�
 ## 2. Weryfikacja kryteriów akceptacji
 
 Skrót: **S** = Spełnione.
+
+### US-01-17
+
+| Kryterium | Wynik | Dowód |
+|---|---|---|
+| 1 nav z „WebStore”, menu Home i Counter, treść pod paskiem | Spełnione | DOM: jeden `nav` (`NavMenu.jsx`) z `a.brand` -> `/`, `Home` -> `/`, `Counter` -> `/counter`; `main` po `nav` (`App.jsx:10-17`) |
+| 2 nawigacja bez przeładowania | Spełnione | Edge/DevTools: znacznik `window.__mark` przetrwał kliknięcie „Counter” i „Home”; adres `/counter`, potem `/`; kliknięcie „WebStore” wraca na `/`; w zdarzeniach sieciowych po kliknięciach brak nowych żądań `Document` |
+| 3 bezpośrednie wejście i odświeżenie `/counter` | Spełnione | `curl` -> 200; render po wejściu i po `Page.reload`: „Counter” z paskiem nawigacji |
+| 4 nieznany adres | Spełnione | `/nie-ma-takiej-strony` -> 200, `nav`, `h1` „Nie znaleziono strony”, odnośnik „Wróć do strony głównej” (`NotFound.jsx`) |
+| 5 treść strony głównej | Spełnione | `Home.jsx`: `h1` „Witaj w WebStore”, opis projektu, 6 warstw z opisami, 5 technologii (.NET, Entity Framework Core, AutoMapper, xUnit, React), po polsku |
+| 6 brak informacji o środowisku | Spełnione | treść stała w kodzie; brak provider-a, ciągu połączenia, liczby rekordów |
+| 7 strona Counter | Spełnione | `h1` „Counter”, opis, „Aktualna wartość: 0”, przycisk „Zwiększ” |
+| 8 trzy kliknięcia | Spełnione | kolejno 1, 2, 3 (`setCount(v => v + 1)`) |
+| 9 stan lokalny | Spełnione | po „Home” i powrocie 0; po przeładowaniu 0; `localStorage` i `sessionStorage` puste (długość 0) |
+| 10 brak API | Spełnione | żądania: tylko `Document`, `Script`, `Stylesheet` i `favicon.ico` (zasób statyczny); `grep` po `src`: brak `fetch`/XHR/bibliotek HTTP; zależności bez biblioteki HTTP; serwer bez zmian |
+| 11 zakres diffu | Spełnione | `git status`: tylko `WebStore.Web/ClientApp`, `sprinty/sprint-01` oraz zdanie o wersji Node.js w `README.md` (wynika z uwagi recenzji, dopuszczone przez raport implementacji) |
+| 12 dostępność i język | Spełnione | `lang="pl"`, `title` „WebStore”, jeden `nav` (z `aria-label`), jeden `main`, dokładnie jeden `h1` na Home, Counter i stronie błędu; elementy `a` i `button` (`type="button"`) |
+| 13 `npm run build` | Spełnione | `npm ci` i `npm run build` kod 0, bez ostrzeżeń i EBADENGINE; `wwwroot/index.html` i `assets/*` |
+| 14 `GET /` po buildzie | Spełnione | 200, `index.html` SPA ze skryptem i stylem; w pliku JS występują „Counter” (6x), „Zwiększ”, „Aktualna wartość” |
+| 15 bez zbudowanego klienta | Spełnione | po przeniesieniu `wwwroot`: `GET /` 200 z instrukcją, brak ostrzeżenia `WebRootPath` |
+| 16 build i test bez Node.js | Spełnione | PATH bez Node.js: `dotnet build -c Release` 0/0; testy 156 (151 zaliczonych, 5 pominiętych); `csproj` wywołuje npm tylko w celu `PublishClient` przed `ComputeFilesToPublish` |
+
+Wynik US-01-17: 16 spełnionych, 0 niespełnionych, 0 niemożliwych do zweryfikowania.
 
 ### US-01-15
 
@@ -96,7 +121,7 @@ Wynik US-01-16: 17 spełnionych, 0 niespełnionych, 0 niemożliwych do zweryfiko
 | US | Kryterium | Wynik | Dowód |
 |---|---|---|---|
 | US-01-10 | 1–9 | S | `SqlServerProviderTests` (5 testów) zaliczone ze zmienną; 156/156; `dotnet test -c Release` kod 0 |
-| US-01-01 – US-01-06, US-01-08, US-01-09, US-01-11 – US-01-14 | wszystkie | S | testy `US_01_*` zaliczone w Release; build 0/0 |
+| US-01-01 – US-01-06, US-01-08, US-01-09, US-01-11 – US-01-14 | wszystkie | S | testy `US_01_*` zaliczone w Release (156 testów, 151 zaliczonych, 5 pominiętych bez zmiennej); build 0/0; `GET /` -> 200 ze zbudowanym klientem i bez niego (US-01-01 pkt 4 i 6) |
 
 ## 3. Uwagi
 
@@ -108,7 +133,7 @@ Brak.
 
 Brak. Dawne uwagi istotne 1 i 2 (siła testów `Get…`/`GetMultiple…` oraz `Update…`) są naprawione, patrz niżej.
 
-### Naprawione w tej iteracji (tylko `WebStore.Tests/UnitTests`)
+### Naprawione wcześniej (tylko `WebStore.Tests/UnitTests`)
 
 - Dawna istotna 1 (filtr w `Get…`/`GetMultiple…`): każdy test ma rekord spoza filtra lub szuka elementu innego niż pierwszy (`GetProductTest`, `GetStoreTest`, `GetOrderTest`, `GetInvoiceTest`; `GetAddressTest` szuka adresu o Id 3; `GetMultiple…` z trzecim rekordem i `DoesNotContain`). Próba mutacyjna: zignorowanie filtra w `ProductService` i `OrderService` (`FirstOrDefault()` i brak `Where`) zawiodło w `GetProductTest`, `GetMultipleProductsTest`, `GetOrderTest`, `GetMultipleOrdersTest`. Pozostałych trzech usług nie mutowałem; wniosek z czytania kodu testów (ten sam wzorzec).
 - Dawna istotna 2 (`Update…`): `ChangeTracker.Clear()`, odczyt `AsNoTracking`, asercje pól i liczby rekordów. Próba mutacyjna: pominięcie `SaveChanges()` w `ProductService` i `OrderService` zawiodło w `UpdateProductTest` i `UpdateOrderTest` (oraz w `AddNew…Test` obu usług).
@@ -143,15 +168,23 @@ Brak. Dawne uwagi istotne 1 i 2 (siła testów `Get…`/`GetMultiple…` oraz `U
 - Opis: serwer bez nazwy instancji i bez hasła (np. adres z portem lub prefiks `tcp:`) nie jest wykrywany, a login zapisany bez poprzedzającego separatora lub cudzysłowa (np. na początku linii) też nie. Nazwa testu („ContainsNoSqlServerConnectionStringOrPassword”) obiecuje nieco więcej niż pokrywa wzorzec. Wzorzec poprawnie wykrywa przypadki z kryteriów: hasło, login po separatorze i `host\instancja` (także z podwójnym ukośnikiem w tekście JSON/C#); skan potwierdzony w testach `DetectsConnectionStrings` (6 przypadków) i `IgnoresOrdinaryCode` (7 przypadków).
 - Kierunek poprawki (opcjonalnie): doprecyzować nazwę lub komentarz do zakresu wzorca.
 
+**6. Wymóg Node.js >= 22.22.0 dla `react-router` 8.5.0 — naprawione.**
+- `package.json` i `package-lock.json` mają `"engines": {"node": ">=22.22.0"}` (próg poprawny i minimalny wspólny), `README.md:41` zawiera zdanie o minimalnej wersji; `npm ci` i `npm run build` na Node v24.20.0 bez EBADENGINE.
+- `CLAUDE.md` (linia o Node.js) zawiera już próg 22.22.0 i odwołanie do `engines` (zmiana dopisana w katalogu roboczym w trakcie recenzji, poza zakresem deklarowanym przez programistę; spójna z `package.json`). `setup.sh` i `setup.ps1` sprawdzają tylko obecność Node.js, nie wersję (znane ograniczenie, odnotowane w raporcie implementacji); to decyzja, nie wada.
+
+**7. Niespójności dokumentacji — naprawione.**
+- `raport-implementacji.md` przejrzany w całości: akapity historyczne usunięte, nie ma sformułowań typu „w tej iteracji”, „po poprawkach”, „dotychczas”, „dawniej”; zachowane mapowanie kryteriów (US-01-01 do US-01-17), lista plików, uruchomienie, wyniki, decyzje oraz stan SQL Server i user-secrets. Liczby aktualne (156 / 151 zaliczonych / 5 pominiętych bez zmiennej; 156 zaliczonych z `WEBSTORE_TEST_SQLSERVER`). Brak ciągu połączenia i haseł (test architektury zaliczony). Resztkowe zdania opisowe o weryfikacji (np. mutacje cofnięte, baza `WebStore` usunięta po teście) opisują stan końcowy, nie historię zmian dokumentu.
+- Podniesienie vite do 8.3.5 było tylko opcjonalne i nie zostało wykonane (wersja przypięta, `npm audit` 0 podatności); nie jest wadą.
+
 ## 4. Zakres
 
-Nie stwierdzono implementacji spoza zaakceptowanych user stories. Zmiany tej iteracji (`Extensions`, `UnitTests`, `Startup`, README, dokumenty) mieszczą się w US-01-16; kod produkcyjny bez zmian. Wcześniejsze poprawki (Release w `setup.ps1`, wzorzec w teście architektury, `RepositoryFiles`) mieszczą się w US-01-07, US-01-10 i US-01-15.
+Nie stwierdzono implementacji spoza zaakceptowanych user stories. Zmiany klienta React, `package.json`, `package-lock.json`, zdania w README i dokumentów mieszczą się w US-01-17; jedyna nowa zależność to `react-router` (uzasadniona w uwagach story); brak nowych plików poza kodem klienta, serwer, usługi, baza i testy bez zmian. Wcześniejsze poprawki (Release w `setup.ps1`, wzorzec w teście architektury, `RepositoryFiles`) mieszczą się w US-01-07, US-01-10 i US-01-15.
 
 Poprawność poszczególnych punktów:
 - `setup.ps1`: zmiana ogranicza się do dodania `-c Release` w krokach build i test (z komentarzem o Smart App Control); kolejność kroków, podsumowanie i kod wyjścia bez zmian; krok SQL Server wykonuje się po kroku testów i nie zależy od jego wyniku. Plik zachował BOM (`EF BB BF`) i zakończenia linii CRLF (wszystkie 209 linii). README opisuje powód Release.
 - `RepositoryPaths.RepositoryFiles()`: separator ścieżek normalizowany tylko w Windows (na macOS ścieżki z `/` używane bez zmian); wyłączenia: `bin`, `obj`, `node_modules`, `.git`, `wwwroot`, `wymagania`, `.claude`; skan obejmuje `sprinty`. Test wykryłby fragment typu usuniętego z raportu implementacji (przypadek `Data Source` z `host\instancja` jest w `DetectsConnectionStrings`), a ten raport go nie zawiera.
-- `user-stories.md`: US-01-15 pkt 10 bez liczby testów, sens niezmieniony; statusy wszystkich 16 story: `Zweryfikowana`.
-- `raport-implementacji.md`: stan faktyczny zgodny z moimi wynikami (156 testów: 151 zaliczonych i 5 pominiętych bez zmiennej; 156/156 ze zmienną); jedyne otwarte kwestie to niezweryfikowana instancja prowadzącego i macOS.
+- `user-stories.md`: US-01-15 pkt 10 bez liczby testów, sens niezmieniony; statusy wszystkich 17 story: `Zweryfikowana` (US-01-17 ustawiona w tej recenzji).
+- `raport-implementacji.md`: wiersze US-01-17 i wyniki (build 0, 156 testów: 151 zaliczonych i 5 pominiętych, blokada Smart App Control i obejście `dotnet WebStore.Tests.dll`) zgodne z moimi wynikami; raport opisuje stan bieżący; otwarte kwestie: instancja prowadzącego, macOS i próg wersji Node.js w `CLAUDE.md` (pytanie 1).
 
 ## 5. Wpływ ograniczenia środowiska (Code Integrity)
 
@@ -159,4 +192,6 @@ Dotychczasowy problem (Smart App Control blokuje ładowanie bibliotek z `bin\Deb
 
 ## 6. Pytania do Lidera
 
-Brak otwartych pytań. Do ustalenia poza repozytorium pozostają: zachowanie na instancji SQL Server prowadzącego (inna wersja, logowanie hasłem) oraz na macOS; nie były weryfikowane.
+1. Potwierdzenie: w katalogu roboczym `CLAUDE.md` ma już zapis „Node.js (LTS, minimum 22.22.0 ...)”. Czy to zamierzona decyzja Lidera (wtedy pytanie zamknięte)? `setup.sh` (`node@22`, macOS niezweryfikowany) i `setup.ps1` nie sprawdzają wersji — czy zostawić jako znane ograniczenie?
+
+Do ustalenia poza repozytorium pozostają: zachowanie na instancji SQL Server prowadzącego (inna wersja, logowanie hasłem) oraz na macOS; nie były weryfikowane.

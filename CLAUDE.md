@@ -57,7 +57,7 @@ Praca odbywa się na macOS i Windowsie. Wymagane narzędzia:
 
 - Git,
 - .NET SDK zgodny z `global.json` (10.0.x; `rollForward: latestFeature` dopuszcza nowsze poprawki tej wersji),
-- Node.js (LTS) — **opcjonalny**: potrzebny wyłącznie do pracy nad klientem React (`WebStore.Web/ClientApp`) i do `dotnet publish`; `dotnet build` i `dotnet test` działają bez niego,
+- Node.js (LTS, minimum 22.22.0 — wymóg `react-router`, zapisany w polu `engines` w `package.json` klienta) — **opcjonalny**: potrzebny wyłącznie do pracy nad klientem React (`WebStore.Web/ClientApp`) i do `dotnet publish`; `dotnet build` i `dotnet test` działają bez niego,
 - Docker lub inna instancja SQL Server — opcjonalne, tylko do testów wariantu SQL Server.
 
 Po `git clone` środowisko sprawdza i przygotowuje jedno polecenie w katalogu głównym repozytorium:

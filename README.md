@@ -38,7 +38,7 @@ CLAUDE.md             zasady pracy w projekcie
 
 ## Uruchomienie
 
-Wymagane: Git i .NET SDK 10. Node.js (LTS) jest potrzebny tylko do pracy nad klientem React.
+Wymagane: Git i .NET SDK 10. Node.js (LTS) jest potrzebny tylko do pracy nad klientem React; do budowania klienta wymagana jest wersja co najmniej 22.22.0 (pole `engines` w `WebStore.Web/ClientApp/package.json`).
 
 Po sklonowaniu repozytorium skrypt sprawdza narzędzia (instalacja brakujących tylko po potwierdzeniu), a następnie wykonuje restore, build i testy:
 

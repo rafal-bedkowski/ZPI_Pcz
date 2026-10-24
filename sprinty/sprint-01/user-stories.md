@@ -9,6 +9,7 @@ Uwagi ogólne:
 - Cała solucja, w tym projekt testów, używa jednej wersji platformy .NET.
 - Zasady zwracania wyników przez wszystkie usługi: brak dopasowania do filtra daje wynik `null`; zapis z `Id` wskazującym nieistniejący rekord kończy się wyjątkiem „nie znaleziono”; `Id` puste lub równe 0 oznacza dodanie nowego rekordu.
 - Poza zakresem user stories (czynności Lidera lub osobne zlecenia Lidera): klonowanie repozytorium, gałęzie, token, commit i push, instalacja narzędzi (VS Code, rozszerzenia, SDK), skrypty konfiguracji środowiska (`setup.sh`, `setup.ps1`; z wyjątkiem kroku konfiguracji SQL Server w `setup.ps1`, który opisuje US-01-15) oraz sekcja „Środowisko” w `CLAUDE.md`. Na maszynie z Windows Lider ma uprawnienia administratora, więc `setup.ps1` może instalować .NET SDK globalnie.
+- Klient React jest wyłącznie statyczną stroną informacyjną (nawigacja, strona główna, „Counter” działający lokalnie w przeglądarce, US-01-17); nie komunikuje się z serwerem. Strona „Fetch data” z szablonu instrukcji jest poza zakresem, bo wymagałaby API.
 - Poza zakresem sprintu: testy integracyjne i testy GUI (Selenium), mierzalny próg pokrycia kodu, kontrolery API i Swagger.
 
 ---
@@ -416,6 +417,48 @@ Raportowanie:
 
 ---
 
+### US-01-17: Strona klienta w układzie z instrukcji (bez API)
+
+**Status:** Zweryfikowana
+**Źródło:** Rozdz. 2 (projekt Web jako „React App”, `dotnet new react`); decyzja Lidera o „drobnej kosmetyce strony”
+**Priorytet:** Niski
+
+**Jako** użytkownik aplikacji (oraz prowadzący oceniający projekt)
+**chcę** zobaczyć w kliencie React stronę podobną do przykładowej strony szablonu z instrukcji: pasek nawigacji z nazwą „WebStore”, stronę główną z opisem projektu i stronę „Counter”
+**aby** projekt Web wyglądał jak aplikacja React z instrukcji, mimo że w .NET 10 szablon `dotnet new react` nie istnieje (US-01-01), i nie wymagał do tego żadnego API.
+
+**Kryteria akceptacji:**
+
+Układ i nawigacja:
+1. **Zakładając, że** klient jest zbudowany, a aplikacja działa, **gdy** zostanie otwarty adres `/`, **wtedy** strona zawiera element nawigacji z nazwą „WebStore” (odsyłającą do strony głównej) oraz dwa odnośniki menu: „Home” (adres `/`) i „Counter” (adres `/counter`), a zawartość strony głównej jest widoczna pod paskiem nawigacji.
+2. **Zakładając, że** strona główna jest otwarta, **gdy** użytkownik kliknie odnośnik „Counter”, **wtedy** wyświetlana jest strona „Counter”, adres w przeglądarce zmienia się na `/counter`, a strona nie jest przeładowywana (brak nowego żądania dokumentu HTML do serwera); kliknięcie „Home” lub nazwy „WebStore” wraca na `/`.
+3. **Zakładając, że** klient jest zbudowany i serwowany przez `WebStore.Web`, **gdy** zostanie wpisany bezpośrednio w pasku adresu (lub odświeżony) adres `/counter`, **wtedy** serwer odpowiada kodem HTTP 200, a przeglądarka wyświetla stronę „Counter” z paskiem nawigacji.
+4. **Zakładając, że** klient jest zbudowany, **gdy** zostanie otwarty adres, który nie odpowiada żadnej stronie (np. `/nie-ma-takiej-strony`), **wtedy** wyświetlany jest pasek nawigacji oraz komunikat „Nie znaleziono strony” z odnośnikiem do strony głównej; aplikacja się nie zawiesza ani nie pokazuje pustego ekranu.
+
+Treść stron (wyłącznie statyczna):
+5. **Zakładając, że** strona główna jest otwarta, **gdy** zostanie sprawdzona jej treść, **wtedy** zawiera nagłówek pierwszego poziomu z powitaniem (np. „Witaj w WebStore”), krótki opis projektu (aplikacja klient–serwer realizowana w sprintach) oraz listę z dwoma zestawami informacji stałych: warstwy solucji (`WebStore.Model`, `WebStore.DAL`, `WebStore.Services`, `WebStore.ViewModels`, `WebStore.Web`, `WebStore.Tests`, każda z jednozdaniowym opisem roli) oraz użyte technologie (.NET, Entity Framework Core, AutoMapper, xUnit, React). Wszystkie teksty są po polsku, z wyjątkiem nazw własnych i nazw w menu.
+6. **Zakładając, że** strona główna lub dowolna inna strona klienta jest otwarta, **gdy** zostanie sprawdzona jej treść, **wtedy** nie zawiera informacji o stanie środowiska ani serwera (w szczególności nazwy używanego providera bazy, ciągu połączenia, liczby rekordów); treść jest stała i identyczna niezależnie od konfiguracji serwera.
+7. **Zakładając, że** strona „Counter” jest otwarta, **gdy** zostanie sprawdzona jej treść, **wtedy** zawiera nagłówek pierwszego poziomu „Counter”, krótki opis oraz tekst „Aktualna wartość: 0” i przycisk „Zwiększ”.
+8. **Zakładając, że** strona „Counter” pokazuje wartość 0, **gdy** użytkownik kliknie „Zwiększ” trzykrotnie, **wtedy** wyświetlana jest wartość 3; przy każdym kliknięciu wartość rośnie dokładnie o 1.
+9. **Zakładając, że** na stronie „Counter” wyświetlana jest wartość większa od 0, **gdy** użytkownik przejdzie na „Home” i wróci na „Counter” albo przeładuje stronę, **wtedy** wartość wynosi 0 (stan jest lokalny dla komponentu, nie jest zapisywany ani w przeglądarce, ani na serwerze).
+
+Brak API:
+10. **Zakładając, że** klient jest otwarty w przeglądarce, **gdy** zostanie użyta strona „Home” i „Counter” (w tym wielokrotne kliknięcia „Zwiększ”), **wtedy** karta sieci przeglądarki nie pokazuje żadnych żądań poza pobraniem dokumentu HTML i zasobów statycznych aplikacji (skrypty, style, ikony); w kodzie klienta nie ma wywołań `fetch`, `XMLHttpRequest` ani bibliotek HTTP, a po stronie serwera nie przybywa kontrolerów, endpointów ani konfiguracji Swagger (US-01-01 pkt 8).
+11. **Zakładając, że** zmiana jest wprowadzona, **gdy** zostanie wykonane `git diff` względem stanu przed zmianą, **wtedy** zmiany obejmują wyłącznie pliki w `WebStore.Web/ClientApp` (oraz ewentualnie `README`, jeżeli jego opis budowy lub uruchomienia klienta przestał być prawdziwy); nie zmieniają się pliki serwera, usług, bazy ani istniejących testów.
+
+Dostępność i język:
+12. **Zakładając, że** zbudowany klient jest otwarty, **gdy** zostanie sprawdzony dokument HTML, **wtedy** element `html` ma atrybut `lang="pl"`, tytuł karty (`title`) jest niepusty i zawiera „WebStore”, nawigacja jest umieszczona w elemencie `nav`, treść strony w elemencie `main`, na każdej stronie jest dokładnie jeden nagłówek `h1`, a odnośniki i przycisk są elementami `a` i `button` (obsługa klawiaturą: Tab i Enter).
+
+Budowanie i uruchamianie:
+13. **Zakładając, że** zainstalowany jest Node.js, **gdy** w `WebStore.Web/ClientApp` zostanie wykonane `npm run build`, **wtedy** polecenie kończy się kodem 0, bez błędów i bez ostrzeżeń w wyjściu, a w `WebStore.Web/wwwroot` powstaje `index.html` wraz z zasobami.
+14. **Zakładając, że** klient został zbudowany, **gdy** zostanie uruchomione `dotnet run --project WebStore.Web` i wysłane żądanie `GET /`, **wtedy** serwer odpowiada kodem 200 i zwraca zbudowany `index.html` aplikacji SPA (a nie stronę z instrukcją budowy); zbudowane pliki JavaScript zawierają teksty „Counter”, „Zwiększ” i „Aktualna wartość”.
+15. **Zakładając, że** klient nie został zbudowany, **gdy** zostanie uruchomione `dotnet run --project WebStore.Web` i wysłane żądanie `GET /`, **wtedy** zachowanie jest bez zmian względem US-01-01 pkt 6: kod 200 i krótka instrukcja budowy klienta, bez ostrzeżenia o braku `WebRootPath`.
+16. **Zakładając, że** na komputerze nie ma Node.js, **gdy** zostanie wykonane `dotnet build` oraz `dotnet test`, **wtedy** oba polecenia kończą się sukcesem (0 błędów i 0 ostrzeżeń w buildzie, wszystkie testy „Passed”), bez uruchamiania npm.
+
+**Uwagi:** Zależy od US-01-01 (projekt Web, klient React, brak API, zachowanie „klient niezbudowany”). Sposób weryfikacji: pkt 1–9 i 12 — oglądowo w przeglądarce (lub równoważnym renderowaniu), pkt 3 i 14–15 — odpowiedź HTTP serwera, pkt 10 — karta sieci przeglądarki i przegląd kodu, pkt 11 — `git diff`, pkt 13 — wyjście `npm run build`, pkt 14 — przeszukanie plików JavaScript w `wwwroot`, pkt 16 — `dotnet build` i `dotnet test`. Istniejące testy automatyczne nie wymagają Node.js, a kryteria nie wymagają testu klienta, dlatego nie dodaje się frameworka testowego klienta (nowe zależności bez uzasadnienia). Wybór routingu: React Router (jedna dodatkowa zależność klienta). Uzasadnienie: kryterium 2–3 wymaga osobnych adresów podstron działających także przy bezpośrednim wejściu i odświeżeniu, co serwer umożliwia przez `MapFallbackToFile("index.html")`; prosty przełącznik stron bez routera nie zapewnia adresów podstron bez własnej, ręcznej obsługi historii przeglądarki, więc router jest prostszy i mniej podatny na błędy. Wersję pakietu ustala programista poleceniem `npm view` jako aktualną stabilną zgodną z React 19. Wygląd (kolory, style) pozostaje decyzją programisty, o ile spełnia kryteria; style nie wymagają dodatkowych bibliotek (np. Bootstrap).
+
+---
+
 ## Macierz pokrycia
 
 | Wymaganie z dokumentu | Identyfikatory US |
@@ -453,4 +496,6 @@ Raportowanie:
 | Decyzja Lidera: rejestracja usług w DI, brak kontrolerów i Swaggera | US-01-01 |
 | Decyzja Lidera: krok SQL Server w `setup.ps1` (user-secrets, zgoda `[t/N]`, `-CheckOnly`), opis w README | US-01-15 |
 | Decyzja Lidera: instancja prowadzącego poza zakresem testów, opis ręcznej konfiguracji user-secrets w README | US-01-15 pkt 13 |
+| Rozdz. 2 Projekt Web jako „React App” (przykładowa strona szablonu: nawigacja, strona główna, Counter; bez „Fetch data”) | US-01-17 (wersja statyczna bez API, decyzja Lidera) |
+| Decyzja Lidera: strona informacyjna klienta bez API, bez stanu środowiska, build klienta bez ostrzeżeń | US-01-17 |
 | Skrypty konfiguracji środowiska (`setup.sh`, `setup.ps1`), sekcja „Środowisko” w `CLAUDE.md` (poza krokiem SQL Server) | Poza zakresem stories (osobne zlecenie Lidera) |

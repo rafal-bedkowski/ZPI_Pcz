@@ -312,6 +312,9 @@ namespace WebStore.DAL.Migrations.SqlServer
                     b.Property<byte[]>("ImageBytes")
                         .HasColumnType("varbinary(max)");
 
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

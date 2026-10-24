@@ -64,6 +64,10 @@ Uzgodniony z Liderem na podstawie wymagań sprintu 1:
 - Testy API: integracyjne (`WebApplicationFactory`) w `WebStore.Tests`.
 - Docelowo SQL Server ma zostać bazą podstawową (SQLite jako wariant, m.in. dla macOS); zmiana domyślnego providera nie wchodzi w zakres sprintu 2.
 
+### Stan prac w sprincie 2
+
+User stories (`sprinty/sprint-02/user-stories.md`) zaakceptowane. Implementacja (krok 4) jest w toku i niedokończona: gotowe są częściowo flaga ukrycia produktu (`Product`, migracje SQLite i SQL Server, `ProductService`, `OrderService`) oraz `JwtOptionsVm` i `LoginUserVm`; zmieniono pliki projektów `WebStore.Web` i `WebStore.Tests`. Nie powstały jeszcze kontrolery, konfiguracja JWT/Identity/Swagger, proxy Vite, testy API ani `raport-implementacji.md`. Zakres wykonany do tej pory nie był zbudowany ani przetestowany. Kolejną sesję programisty uruchamia się na całość US-02-01 do US-02-13, weryfikując istniejący stan.
+
 ## Środowisko
 
 Praca odbywa się na macOS i Windowsie. Wymagane narzędzia:

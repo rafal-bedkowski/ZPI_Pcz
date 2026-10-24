@@ -9,6 +9,9 @@ public class Product
     public decimal Price { get; set; }
     public float Weight { get; set; }
 
+    // Ukryty produkt nie jest oferowany ani przyjmowany w zamówieniach, ale zostaje w bazie z powodu historii zamówień.
+    public bool IsHidden { get; set; }
+
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
 

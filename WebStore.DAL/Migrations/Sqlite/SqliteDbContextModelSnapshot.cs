@@ -174,7 +174,7 @@ namespace WebStore.DAL.Migrations.Sqlite
 
                     b.HasKey("Id");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.Category", b =>
@@ -193,7 +193,7 @@ namespace WebStore.DAL.Migrations.Sqlite
 
                     b.HasKey("Id");
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.Invoice", b =>
@@ -223,7 +223,7 @@ namespace WebStore.DAL.Migrations.Sqlite
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Invoices", (string)null);
+                    b.ToTable("Invoices");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.Order", b =>
@@ -248,7 +248,7 @@ namespace WebStore.DAL.Migrations.Sqlite
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.OrderProduct", b =>
@@ -269,7 +269,7 @@ namespace WebStore.DAL.Migrations.Sqlite
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("OrderProducts", (string)null);
+                    b.ToTable("OrderProducts");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.Product", b =>
@@ -287,6 +287,9 @@ namespace WebStore.DAL.Migrations.Sqlite
 
                     b.Property<byte[]>("ImageBytes")
                         .HasColumnType("BLOB");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -307,7 +310,7 @@ namespace WebStore.DAL.Migrations.Sqlite
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.ProductStock", b =>
@@ -331,7 +334,7 @@ namespace WebStore.DAL.Migrations.Sqlite
 
                     b.HasIndex("StationaryStoreId");
 
-                    b.ToTable("ProductStocks", (string)null);
+                    b.ToTable("ProductStocks");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.StationaryStore", b =>
@@ -352,7 +355,7 @@ namespace WebStore.DAL.Migrations.Sqlite
                     b.HasIndex("AddressId")
                         .IsUnique();
 
-                    b.ToTable("StationaryStores", (string)null);
+                    b.ToTable("StationaryStores");
                 });
 
             modelBuilder.Entity("WebStore.Model.DataModels.User", b =>

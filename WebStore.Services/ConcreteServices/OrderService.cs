@@ -35,7 +35,7 @@ public class OrderService : BaseService, IOrderService
         }
 
         var productIds = model.Products.Select(p => p.ProductId).Distinct().ToList();
-        var products = DbContext.Products.Where(p => productIds.Contains(p.Id)).ToDictionary(p => p.Id);
+        var products = DbContext.Products.Where(p => productIds.Contains(p.Id) && !p.IsHidden).ToDictionary(p => p.Id);
         var missing = productIds.Where(id => !products.ContainsKey(id)).ToList();
         if (missing.Count > 0)
         {

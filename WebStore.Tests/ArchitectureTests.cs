@@ -44,8 +44,15 @@ public class ArchitectureTests
         Assert.Equal(new[] { "WebStore.Model" }, ProjectReferences("WebStore.ViewModels"));
         Assert.Equal(new[] { "WebStore.DAL", "WebStore.Model", "WebStore.ViewModels" }, ProjectReferences("WebStore.Services"));
         Assert.Equal(new[] { "WebStore.DAL", "WebStore.Model", "WebStore.Services", "WebStore.ViewModels" }, ProjectReferences("WebStore.Web"));
-        Assert.Equal(new[] { "WebStore.DAL", "WebStore.Model", "WebStore.Services" }, ProjectReferences("WebStore.Tests"));
+        Assert.Equal(new[] { "WebStore.DAL", "WebStore.Model", "WebStore.Services", "WebStore.Web" }, ProjectReferences("WebStore.Tests"));
         Assert.Empty(ProjectReferences("WebStore.Model"));
+
+        // Projekt Web jest szczytem zależności: poza testami integracyjnymi nikt się do niego nie odwołuje.
+        foreach (var project in new[] { "WebStore.Model", "WebStore.DAL", "WebStore.ViewModels", "WebStore.Services" })
+        {
+            Assert.DoesNotContain("WebStore.Web", ProjectReferences(project));
+            Assert.DoesNotContain("WebStore.Tests", ProjectReferences(project));
+        }
     }
 
     [Fact]
@@ -68,17 +75,25 @@ public class ArchitectureTests
     }
 
     [Fact]
-    public void US_01_01_WebProject_HasNoApiControllersNorSwagger()
+    public void US_01_01_WebProject_ExposesApiControllersAndSwaggerOnlyInDevelopment()
     {
         var web = File.ReadAllText(Path.Combine(RepositoryPaths.Root, "WebStore.Web", "WebStore.Web.csproj"));
         var program = File.ReadAllText(Path.Combine(RepositoryPaths.Root, "WebStore.Web", "Program.cs"));
 
-        Assert.DoesNotContain("Swashbuckle", web);
-        Assert.DoesNotContain("Swagger", program, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("MapControllers", program);
-        Assert.DoesNotContain(
-            Directory.EnumerateFiles(Path.Combine(RepositoryPaths.Root, "WebStore.Web"), "*Controller.cs", SearchOption.AllDirectories),
-            f => !f.Contains("node_modules"));
+        Assert.Contains("Swashbuckle.AspNetCore", web);
+        Assert.Contains("MapControllers", program);
+        Assert.Contains("IsDevelopment", program);
+        Assert.DoesNotContain("AddControllersWithViews", program);
+        Assert.DoesNotContain("MapControllerRoute", program);
+        Assert.DoesNotContain("Cors", program, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Antiforgery", program, StringComparison.OrdinalIgnoreCase);
+
+        // Kontrolery istnieją wyłącznie w folderze Controllers.
+        var controllersFolder = Path.Combine(RepositoryPaths.Root, "WebStore.Web", "Controllers");
+        Assert.All(
+            Directory.EnumerateFiles(Path.Combine(RepositoryPaths.Root, "WebStore.Web"), "*Controller.cs", SearchOption.AllDirectories)
+                .Where(f => !f.Contains("node_modules")),
+            f => Assert.Equal(controllersFolder, Path.GetDirectoryName(f)));
     }
 
     [Fact]

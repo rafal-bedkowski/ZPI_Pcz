@@ -33,7 +33,7 @@ Uwagi ogólne:
 
 ### US-02-01: Szkielet Web API (kontroler bazowy, JSON, trasy)
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 2, 4, 6, 9; „Zadanie” (zasada: brak logiki biznesowej w kontrolerach)
 **Priorytet:** Wysoki
 
@@ -59,7 +59,7 @@ Uwagi ogólne:
 
 ### US-02-02: Konfiguracja uwierzytelniania JWT i Identity
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 2–5, 7 (JwtBearer, `JwtOptions`, `JwtOptionsVm`, `AddIdentity`, `AddAuthentication`/`AddJwtBearer`)
 **Priorytet:** Wysoki
 
@@ -77,13 +77,13 @@ Uwagi ogólne:
 7. **Zakładając, że** repozytorium jest sprawdzone, **gdy** zostaną przejrzone jego pliki (w tym `appsettings*.json`, `README`), **wtedy** nie występuje w nich klucz podpisujący JWT ani hasła kont testowych (zgodnie z `CLAUDE.md`).
 8. **Zakładając, że** aplikacja jest uruchomiona na SQLite (domyślnie) lub na SQL Server (skonfigurowanym jak w sprincie 1), **gdy** zostanie wykonane logowanie i wywołanie chronionego endpointu, **wtedy** działają tak samo na obu providerach bez zmian w modelu i usługach.
 
-**Uwagi:** Zależy od US-01-06 (kontekst z Identity, `User`). Czas wydania i wygaśnięcia tokenu jest w UTC (US-02-03). Konta, na których działa logowanie: US-02-03.
+**Uwagi:** Zależy od US-01-06 (kontekst z Identity, `User`). Czas wydania i wygaśnięcia tokenu jest w UTC (US-02-03). Konta, na których działa logowanie: US-02-03. Pkt 8 jest zweryfikowany na SQLite; jego weryfikacja na SQL Server (zmienna `WEBSTORE_TEST_SQLSERVER`) zostanie wykonana na Windowsie.
 
 ---
 
 ### US-02-03: Konta testowe, logowanie i wydawanie tokenu (AccountApi/Login)
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 5 (`LoginUserVm`), pkt 7 (`AccountApiController`), Postman (pola Login, Password; odpowiedź `access_token`, `expires_in`)
 **Priorytet:** Wysoki
 
@@ -116,7 +116,7 @@ Logowanie:
 
 ### US-02-04: Dokumentacja Swagger z obsługą tokenu Bearer
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 4 (konfiguracja Swagger), pkt 10 (Swagger UI, `/swagger/index.html`, Postman); okno autoryzacji tokenem w Swaggerze
 **Priorytet:** Średni
 
@@ -138,7 +138,7 @@ Logowanie:
 
 ### US-02-05: ProductApi — odczyt produktów
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 8 (`GET`, `GET {id}`), akapit o CRUD (R)
 **Priorytet:** Wysoki
 
@@ -161,7 +161,7 @@ Logowanie:
 
 ### US-02-06: ProductApi — dodawanie i modyfikacja produktów
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 8 (`POST`, `PUT`, `PostOrPutHelper`), akapit o CRUD (C, U)
 **Priorytet:** Wysoki
 
@@ -182,13 +182,13 @@ Logowanie:
 10. **Zakładając, że** cena z częścią ułamkową (np. 19,99) została wysłana w JSON, **gdy** produkt zostanie zapisany i pobrany `GET /api/ProductApi/{id}`, **wtedy** `Price` jest identyczna jak wysłana (bez błędów zaokrągleń), na każdym providerze bazy.
 11. **Zakładając, że** żądanie nie ma poprawnego tokenu, **gdy** zostanie wysłane `POST` lub `PUT`, **wtedy** odpowiedź ma kod 401 i nic nie jest zapisane.
 
-**Uwagi:** Reguły walidacji i zapisu pozostają w `ProductService`; kontroler rozróżnia dodanie i modyfikację tylko na podstawie metody HTTP i `Id` (kryteria 3–4). Zależy od US-02-01 i US-02-02.
+**Uwagi:** Reguły walidacji i zapisu pozostają w `ProductService`; kontroler rozróżnia dodanie i modyfikację tylko na podstawie metody HTTP i `Id` (kryteria 3–4). Pkt 10 jest zweryfikowany na SQLite; jego weryfikacja na SQL Server (zmienna `WEBSTORE_TEST_SQLSERVER`) zostanie wykonana na Windowsie. Zależy od US-02-01 i US-02-02.
 
 ---
 
 ### US-02-07: ProductApi — ukrywanie produktu (DELETE)
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 8 (`DELETE {id}`, `DeleteProduct`), akapit o CRUD (D: „usunięcie / ukrycie”); decyzja Lidera: ukrycie produktu flagą
 **Priorytet:** Średni
 
@@ -212,7 +212,7 @@ Logowanie:
 
 ### US-02-08: AddressApi — adresy
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** „Zadanie” (`AddressApiController`), rozdz. 3 (przykład `GET /api/Address` w Swaggerze)
 **Priorytet:** Średni
 
@@ -235,7 +235,7 @@ Logowanie:
 
 ### US-02-09: StoreApi — sklepy stacjonarne
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** „Zadanie” (`StoreApiController`)
 **Priorytet:** Średni
 
@@ -251,14 +251,17 @@ Logowanie:
 5. **Zakładając, że** ciało żądania jest niepoprawne walidacyjnie lub niepoprawne jako JSON albo wskazuje nieistniejący adres, **gdy** zostanie wysłane `POST` lub `PUT`, **wtedy** odpowiedź ma kod 400, a nic nie jest zapisane.
 6. **Zakładając, że** żądanie nie ma poprawnego tokenu, **gdy** zostanie wysłane dowolne żądanie do `StoreApi`, **wtedy** odpowiedź ma kod 401.
 7. **Zakładając, że** kontroler jest sprawdzony, **gdy** zostanie przejrzony, **wtedy** nie udostępnia `DELETE`.
+8. **Zakładając, że** adres o `Id` = X jest już przypisany do innego sklepu, **gdy** zostanie wysłane `POST /api/StoreApi` wskazujące adres X, **wtedy** odpowiedź ma kod 400 z komunikatem po polsku informującym, że adres jest już przypisany do innego sklepu (nie 500), a w bazie nie przybywa rekordów.
+9. **Zakładając, że** adres o `Id` = X jest przypisany do sklepu A, a istnieje inny sklep B, **gdy** zostanie wysłane `PUT /api/StoreApi` dla sklepu B wskazujące adres X, **wtedy** odpowiedź ma kod 400 z komunikatem po polsku (nie 500), a dane sklepów A i B pozostają bez zmian. Dla `PUT` sklepu A wskazującego nadal adres X odpowiedź ma kod 200.
+10. **Zakładając, że** `StoreService` otrzymuje zapis sklepu z adresem przypisanym do innego sklepu, **gdy** zapis jest wykonywany bezpośrednio przez usługę (bez warstwy API), **wtedy** usługa sprawdza to przed zapisem i zgłasza błąd walidacji (`ValidationException`, jak w `OrderService`) zamiast wyjątku bazy danych, a nic nie jest zapisane. Testy jednostkowe `StoreService` obejmują ten scenariusz dla dodawania, dla modyfikacji z adresem innego sklepu oraz dla modyfikacji z adresem tego samego sklepu (dozwolona), a testy `StoreApi` obejmują scenariusze z pkt 8 i 9.
 
-**Uwagi:** Zakres odpowiada `IStoreService`. Zależy od US-02-01 i US-02-02.
+**Uwagi:** Zakres odpowiada `IStoreService`. Walidacja unikalności adresu w `StoreService` (pkt 10) uzupełnia zachowanie usługi z US-01-13; relacja sklep–adres jest 1:1. Zależy od US-02-01 i US-02-02.
 
 ---
 
 ### US-02-10: OrderApi — zamówienia
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** „Zadanie” (`OrderApiController`)
 **Priorytet:** Wysoki
 
@@ -284,7 +287,7 @@ Logowanie:
 
 ### US-02-11: InvoiceApi — faktury
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** „Zadanie” (`InvoiceApiController`)
 **Priorytet:** Średni
 
@@ -303,13 +306,13 @@ Logowanie:
 8. **Zakładając, że** żądanie nie ma poprawnego tokenu, **gdy** zostanie wysłane dowolne żądanie do `InvoiceApi`, **wtedy** odpowiedź ma kod 401.
 9. **Zakładając, że** kontroler jest sprawdzony, **gdy** zostanie przejrzony, **wtedy** nie udostępnia `DELETE`.
 
-**Uwagi:** Model wejściowy nie zawiera `TotalAmount` (US-01-12 pkt 8). Zależy od US-02-01 i US-02-02.
+**Uwagi:** Model wejściowy nie zawiera `TotalAmount` (US-01-12 pkt 8). Znane ograniczenie zaakceptowane przez Lidera: przy równoległych `POST` dla tego samego zamówienia drugie żądanie może zakończyć się odpowiedzią 500 (wyjątek unikalnego indeksu bazy) zamiast 409; obsługa wyścigu jest poza zakresem sprintu. Zależy od US-02-01 i US-02-02.
 
 ---
 
 ### US-02-12: Serwer deweloperski klienta React kierujący /api i /swagger do serwera
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 9 (`setupProxy.js`: ścieżki `/api` i `/swagger`); decyzja Lidera: odpowiednikiem w Vite jest `server.proxy`
 **Priorytet:** Niski
 
@@ -332,7 +335,7 @@ Logowanie:
 
 ### US-02-13: Testy integracyjne API i dostosowanie testów architektury
 
-**Status:** Zaakceptowana
+**Status:** Zweryfikowana
 **Źródło:** Rozdz. 3 pkt 10 (testowanie endpointów); decyzja Lidera: testy integracyjne `WebApplicationFactory` z referencją Tests→Web; zasady wspólne projektu (brak regresji sprintu 1)
 **Priorytet:** Średni
 
@@ -354,7 +357,7 @@ Logowanie:
    - tworzenie kont testowych tylko w Development i bez duplikatów po ponownym starcie — US-02-03 pkt 1–3.
 6. **Zakładając, że** dodano testy, **gdy** zostanie wykonane `dotnet test`, **wtedy** wszystkie testy (istniejące i nowe) kończą się wynikiem „Passed”, polecenie zwraca kod 0, a testy wariantu SQL Server są pomijane, dopóki `WEBSTORE_TEST_SQLSERVER` nie zawiera ciągu połączenia; `dotnet build` i `dotnet test` nie wymagają Node.js.
 7. **Zakładając, że** dotychczasowe testy sprintu 1 istnieją, **gdy** zostanie porównana lista testów przed i po zmianie, **wtedy** żaden dotychczasowy test nie został usunięty, przemianowany ani osłabiony (poza dostosowaniem testów architektury z pkt 2–3, opisanym w raporcie implementacji).
-8. **Zakładając, że** nowe testy są dodane, **gdy** zostaną sprawdzone nazwy metod, **wtedy** nie zawierają identyfikatorów US, a `README` opisuje sposób uruchomienia wszystkich testów, pojedynczej metody i klasy (`--filter-method`, `--filter-class`).
+8. **Zakładając, że** nowe testy są dodane, **gdy** zostaną sprawdzone nazwy metod, **wtedy** nazwy metod testów API nie zawierają identyfikatorów US (wyjątek: testy w `StoreServiceTests` związane z US-02-09 zachowują prefiks identyfikatora US w nazwie, zgodnie z konwencją tego pliku ze sprintu 1), a `README` opisuje sposób uruchomienia wszystkich testów, pojedynczej metody i klasy (`--filter-method`, `--filter-class`).
 
 **Uwagi:** Instrukcja wymaga tylko ręcznego testu Swaggerem/Postmanem; zakres testowy wynika z decyzji Lidera. Zmiana schematu zależności projektów dotyka `CLAUDE.md` (sekcja „Struktura katalogów”) — edycji dokona główna sesja po akceptacji. Zależy od US-02-01–US-02-11.
 

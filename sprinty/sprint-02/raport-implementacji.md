@@ -1,0 +1,91 @@
+# Sprint 02 — Raport implementacji
+
+Zaimplementowano US-02-01 do US-02-13 (status w `user-stories.md`: `Zaimplementowana`). Kod czeka na akceptację Lidera (bramka 2).
+
+## 1. Zaimplementowane user stories i mapowanie kryteriów na testy
+
+Nazwy metod nowych testów nie zawierają identyfikatorów US (US-02-13 pkt 8), dlatego mapowanie jest tutaj. Skróty klas: `Product` = `ProductApiTests`, `Account` = `AccountApiTests`, `Auth` = `AuthenticationTests`, `Key` = `JwtKeyTests`, `Seed` = `TestAccountSeedingTests`, `Host` = `HostingTests`, `Conv` = `ControllerConventionTests`, `Vis` = `ProductVisibilityServiceTests` (wszystkie w `WebStore.Tests`, klasy API w `WebStore.Tests/Api`).
+
+| US | Kryteria → testy |
+|---|---|
+| US-02-01 | 1: `Conv.BaseApiController_IsAbstractApiControllerProducingJsonWithApiRoute`, `…HasProtectedReadonlyLoggerAndMapperPassedThroughConstructor`. 2: `Host.ErrorAndNoContentResponses_HaveExpectedContentTypes`, `Product.GetAll_ReturnsAllVisibleProducts`. 3: `Host.UnknownApiController_Returns404InsteadOfClientPage`. 4: `Host.ClientRoutes_ServeClientPage`. 5: `Conv.Controllers_DoNotDependOnDbContextOrEntityFramework`. 6: `Product.Service_UnexpectedException_Returns500WithGenericMessageAndIsLogged`. 7: `Product.Delete_UnknownOrAlreadyHiddenProduct_Returns404`, `Product.Write_WithMissingRequiredField_…`, `InvoiceApiTests.Post_SecondInvoiceForTheSameOrder_Returns409AndSavesNothing`. 8: `ArchitectureTests.US_01_01_WebProject_ExposesApiControllersAndSwaggerOnlyInDevelopment`. 9: `Host.HttpRequest_IsRedirectedToHttps`, `Conv.LaunchSettings_ContainHttpsProfile`. 10: `dotnet build` / `dotnet test` (pkt 4). |
+| US-02-02 | 1: `Auth.JwtOptions_AreReadFromConfiguration`, `Conv.AppSettings_ContainJwtSettingsWithoutSecretsAndTestAccountPassword`. 2: `Auth.IdentityPasswordPolicy_RequiresOnlyMinimumLength`. 3: `Auth.ValidToken_IsAccepted`, `Auth.RolesFromToken_AreAvailableAsUserRoles`. 4: `Auth.MissingToken_IsRejected`, `…TokenWithWrongSignature_IsRejected`, `…TokenWithWrongIssuerOrAudience_IsRejected`, `…ExpiredToken_IsRejectedAfterClockSkew`, `…TokenExpiredWithinClockSkew_IsStillAccepted`, `…MalformedToken_IsRejected`. 5: `Key.Development_WithoutKey_GeneratesRandomKeyAndTokensDoNotSurviveRestart`, `Key.Development_WithoutKey_UsesKeyOfAtLeast32Bytes`. 6: `Key.OutsideDevelopment_MissingOrShortKey_StopsStartupWithPolishMessage`, `Key.OutsideDevelopment_ConfiguredKey_StartsNormally`. 7: `Conv.AppSettings_…` (brak `SecretKey` i hasła w `appsettings*.json`) oraz istniejący `US_01_07_Repository_ContainsNoSqlServerConnectionStringOrPassword`. 8: testy uruchamiane na SQLite; wariant SQL Server poza zakresem (pominięty na macOS), kod nie zawiera odwołań do providera (`US_01_06_ModelServicesViewModels_DoNotReferenceDatabaseProviders`). |
+| US-02-03 | 1: `Seed.Development_WithPassword_CreatesRolesAndAccounts`, `Seed.SeedingAgain_DoesNotCreateDuplicates`. 2: `Seed.OutsideDevelopment_AccountsAreNotCreated`. 3: `Seed.Development_WithoutPassword_SkipsAccountsAndWarnsInPolish`. 4: `Conv.AppSettings_…`, hasło w testach jest losowe (brak w plikach). 5: `ConventionTests.US_01_08_ViewModels_LiveInVmNamespaceAndEndWithVm` (istniejący) oraz walidacja w `Account.Login_InvalidInput_Returns400`, `…Login_TooLongPassword_Returns400`. 6: `Account.Login_AsJson_ReturnsTokenAndExpiry`, `…Login_AsUrlEncodedForm_ReturnsToken`, `…Login_AsMultipartForm_ReturnsToken`. 7: `Account.Login_Token_ContainsExpectedClaims`. 8: `Account.Login_WrongCredentials_Returns401WithGenericMessageAndNoToken`, `Account.Login_ManyFailedAttempts_DoNotLockTheAccount`. 9: `Account.Login_InvalidInput_Returns400`, `…Login_InvalidForm_Returns400`, `…Login_InvalidInput_DoesNotAttemptToLogIn`. 10: `Account.Login_UnexpectedException_Returns500WithGenericMessageAndIsLogged`. 11: `Account.Login_DoesNotWritePasswordOrTokenToLogs`. 12: `Account.Login_IsPublic_ButRestOfApiRequiresToken`. 13: `Account.Login_Token_WorksForBothRolesOnProtectedEndpoint`. |
+| US-02-04 | 1–2: `Host.SwaggerDocument_InDevelopment_DescribesEndpointsAndBearerScheme`. 3–4: schemat Bearer w dokumencie (pkt 2) i 401 bez tokenu (`Auth.MissingToken_IsRejected`); okno „Authorize” sprawdzone ręcznie wg README (patrz pkt 4 raportu). 5: `Host.SwaggerUi_InDevelopment_ShowsDocumentationInsteadOfClient`. 6: `Host.Swagger_OutsideDevelopment_Returns404`. |
+| US-02-05 | 1–2: `Product.GetAll_ReturnsAllVisibleProducts`, `Product.GetAll_WhenEveryProductIsHidden_ReturnsEmptyList`. 3: `Product.GetById_ReturnsProduct`. 4–5: `Product.GetById_UnknownOrInvalidId_Returns404` (999, 0, -1, abc). 6: `Product.Get_WithoutValidToken_Returns401`. 7: `Product.Service_UnexpectedException_…`. |
+| US-02-06 | 1: `Product.Post_CreatesProductAndReturns201WithLocation`, `Product.Post_WithZeroId_IsTreatedAsNewProduct`. 2: `Product.Put_UpdatesExistingProduct`. 3: `Product.Post_WithId_Returns400AndSavesNothing`. 4: `Product.Put_WithoutId_Returns400AndSavesNothing`. 5: `Product.Write_WithMissingRequiredField_Returns400WithValidationDetails`. 6: `Product.Write_WithEmptyOrMalformedBody_Returns400`. 7: `Product.Post_UnknownCategoryOrSupplier_…`, `Product.Put_UnknownCategory_Returns400`. 8: `Product.Put_UnknownId_Returns404AndAddsNothing`, `Product.Put_HiddenProduct_Returns404`. 9: `Product.Put_WithoutImage_KeepsExistingImage`. 10: `Product.Price_WithFractionalPart_IsStoredExactly` (SQLite; SQL Server poza zakresem). 11: `Product.Write_WithoutValidToken_Returns401AndSavesNothing`. |
+| US-02-07 | 1: `Product.Delete_HidesProductButKeepsRecord`. 2: `Product.Delete_UnknownOrAlreadyHiddenProduct_Returns404`. 3: `Product.Delete_ProductInExistingOrder_LeavesOrderUntouched`. 4: `Product.Delete_InvalidId_Returns404`. 5: `Product.Delete_WithoutValidToken_Returns401AndKeepsProductVisible`. 6: istniejące `MigrationTests` (sprint 1: brak zmian w modelu bez migracji, neutralność providerów) przechodzą; migracje SQLite i SQL Server z flagą `IsHidden` (domyślnie `false`) są w `WebStore.DAL/Migrations`. 7: `Product.Order_WithHiddenProduct_IsRejectedWithValidationError`, `Vis.Order_WithHiddenProduct_IsRejectedAndNothingIsSaved`. 8: `Vis.*` (7 testów: ukrycie, niewidoczność w `GetProduct`/`GetProducts`, 404 dla nieistniejącego i ukrytego, brak modyfikacji ukrytego, odrzucenie zamówienia, nietknięte zamówienia). |
+| US-02-08 | `AddressApiTests`: `GetAll_ReturnsEveryAddress` (1), `GetById_ReturnsAddressOrNotFound` (2), `Post_CreatesAddressAndReturns201WithLocation`, `Post_WithId_Returns400` (3), `Put_UpdatesAddress_UnknownIs404_MissingIdIs400` (4), `Write_WithInvalidBody_Returns400AndSavesNothing` (5), `EveryRequest_WithoutToken_Returns401` (6), `Delete_IsNotAvailable` + `Conv.OnlyProductApi_ExposesDelete` (7). |
+| US-02-09 | `StoreApiTests`: `GetAll_ReturnsEveryStore` (1), `GetById_ReturnsStoreWithAddressOrNotFound` (2), `Post_CreatesStoreWithAddressAndReturns201WithLocation`, `Post_WithId_Returns400` (3), `Put_UpdatesStore_UnknownIs404_MissingIdIs400` (4), `Post_UnknownAddress_Returns400AndSavesNothing`, `Write_WithInvalidBody_Returns400` (5), `Write_AddressUsedByAnotherStore_Returns400WithMessageAndSavesNothing` (8–9), `Put_StoreWithOwnAddress_Returns200` (10); usługa: `StoreServiceTests.US_02_09_AddOrUpdateStore_AddressUsedByAnotherStore_…`, `…_OwnAddress_IsAccepted`, `EveryRequest_WithoutToken_Returns401` (6), `Delete_IsNotAvailable` (7). |
+| US-02-10 | `OrderApiTests`: `GetAll_ReturnsEveryOrder`, `GetAll_ForCustomerToken_IsNotFilteredByRole` (1), `GetById_ReturnsOrderWithItemsAndTotal`, `GetById_UnknownOrInvalidId_Returns404` (2), `Post_CreatesOrderWithFrozenPricesAndReturns201WithLocation`, `Post_WithId_Returns400` (3), `Write_WithInvalidItem_Returns400AndSavesNothing`, `Write_WithEmptyItemList_Returns400WithMessage` (4), `Write_UnknownCustomer_Returns400AndSavesNothing` (5), `Put_UpdatesOrder_UnknownIs404_MissingIdIs400` (6), `Write_WithEmptyOrMalformedBody_Returns400` (7), `EveryRequest_WithoutToken_Returns401` (8), `Delete_IsNotAvailable` (9), `Product.Order_WithHiddenProduct_…` i `Product.Delete_ProductInExistingOrder_…` (10). |
+| US-02-11 | `InvoiceApiTests`: `GetAll_ReturnsEveryInvoice` (1), `GetById_ReturnsInvoiceOrNotFound` (2), `Post_CreatesInvoiceWithOrderTotalAndReturns201WithLocation`, `Post_WithId_Returns400` (3), `Post_SecondInvoiceForTheSameOrder_Returns409AndSavesNothing` (4), `Write_UnknownOrder_Returns400AndSavesNothing` (5), `Put_UpdatesInvoice_UnknownIs404_MissingIdIs400` (6), `Write_WithInvalidBody_Returns400AndSavesNothing` (7), `EveryRequest_WithoutToken_Returns401` (8), `Delete_IsNotAvailable` (9). |
+| US-02-12 | Konfiguracja `server.proxy` w `WebStore.Web/ClientApp/vite.config.js`; sprawdzona ręcznie (patrz pkt 4), bez testu automatycznego. Pkt 5: `npm ci` i `npm run build` (Vite 8.3.4) przeszły u Lidera. |
+| US-02-13 | 1–2: `ArchitectureTests.US_01_01_CsprojFiles_ReferenceExpectedProjects` (Tests→Services, Model, DAL, Web; nikt poza testami nie referencjonuje Web). 3: `Conv.EveryController_InheritsBaseApiControllerAndEndsWithApiController`, `Conv.Controllers_DoNotDependOnDbContextOrEntityFramework` oraz dostosowany `US_01_01_WebProject_ExposesApiControllersAndSwaggerOnlyInDevelopment`. 4: `ApiFactory` tworzy dla każdego testu osobną bazę SQLite w pamięci z `TestData` i własną konfigurację JWT (losowy klucz, `Issuer`, `Audience`). 5: wszystkie wymienione scenariusze są pokryte testami z tabeli powyżej. 6–7: patrz pkt 4. 8: nazwy bez identyfikatorów US; README opisuje uruchomienie wszystkich testów, metody i klasy. |
+
+## 2. Zmienione i dodane pliki
+
+Serwer (`WebStore.Web`):
+- `WebStore.Services/ConcreteServices/StoreService.cs` — walidacja unikalności adresu sklepu przed zapisem (`ValidationException`, 400 w API).
+- `Program.cs` — rejestracja kontrolerów, Identity i JWT, Swagger (tylko Development), przekierowanie HTTPS, routing klienta z wyłączeniem `/api` i `/swagger`, tworzenie kont testowych w Development, `public partial class Program` dla testów integracyjnych.
+- `appsettings.json` — sekcja `JwtOptions` (`Issuer`, `Audience`, `TokenExpirationMinutes` = 20, bez klucza).
+- `Controllers/BaseApiController.cs` — kontroler bazowy (JSON, `api/[controller]`, `[Authorize]`, `Logger`, `Mapper`) oraz tłumaczenie wyjątków usług na kody HTTP (400/404/409/500).
+- `Controllers/AccountApiController.cs`, `ProductApiController.cs`, `OrderApiController.cs`, `InvoiceApiController.cs`, `StoreApiController.cs`, `AddressApiController.cs` — cienkie kontrolery zasobów (`DELETE` tylko w `ProductApi`).
+- `Configuration/AuthenticationServiceCollectionExtensions.cs` — Identity, JWT Bearer, odczyt i walidacja `JwtOptions` przy starcie (losowy klucz w Development, błąd po polsku poza nim).
+- `Configuration/SwaggerServiceCollectionExtensions.cs` — dokument „WebStore API” v1 ze schematem Bearer.
+- `Services/ILoginService.cs`, `Services/LoginService.cs` — uwierzytelnienie loginem i hasłem oraz wydanie tokenu JWT (UTC, role w claimach).
+- `Services/TestAccountSeeder.cs` — role `Admin`/`Customer` i konta testowe z hasłem z `Seed:TestAccountPassword`.
+- `Infrastructure/FormLoginInputFormatter.cs` — przyjmowanie danych logowania także jako formularz (urlencoded i multipart).
+- `ClientApp/vite.config.js` — `server.proxy` dla `/api` i `/swagger` (cel z `API_TARGET`, domyślnie `https://localhost:7192`; błąd bramy 502 przy niedostępnym API).
+
+Pozostałe projekty:
+- `WebStore.ViewModels/VM/LoginResultVm.cs` — odpowiedź logowania (`access_token`, `expires_in`).
+- `WebStore.Services/Configuration/Profiles/MainProfile.cs` — `IsHidden` ignorowane w mapowaniu `AddOrUpdateProductVm` → `Product`.
+- `WebStore.Services/WebStore.Services.csproj` — AutoMapper 16.3.0.
+- `README.md` — opis API, konfiguracji JWT, kont testowych, Swaggera, proxy klienta i testów integracyjnych.
+- `sprinty/sprint-02/user-stories.md` — statusy US-02-01…13 na `Zaimplementowana` (poza statusem bez zmian).
+
+Wcześniej rozpoczęte i zweryfikowane bez zmian: flaga `IsHidden` w `Product`, migracje SQLite i SQL Server, `ProductService.HideProduct`, reguła w `OrderService`, `JwtOptionsVm`, `LoginUserVm`, referencje i pakiety w csproj Web i Tests.
+
+Testy (`WebStore.Tests`):
+- `ArchitectureTests.cs` — dostosowane: referencje Tests→Web (plus reguła, że Web jest szczytem zależności) oraz test założenia „brak kontrolerów i Swaggera” zastąpiony testem odwrotnym (przemianowany na `US_01_01_WebProject_ExposesApiControllersAndSwaggerOnlyInDevelopment`; pilnuje m.in. braku `AddControllersWithViews`, trasy MVC, CORS i Antiforgery).
+- `Infrastructure/ApiFactory.cs`, `Infrastructure/CapturingLoggerProvider.cs` — aplikacja w pamięci z własną bazą i konfiguracją JWT, zbieranie logów.
+- `Api/*` — testy integracyjne (konta, uwierzytelnianie, klucz JWT, konta testowe, hosting i Swagger, pięć kontrolerów zasobów), `Api/ThrowingProductService.cs` do scenariusza błędu 500.
+- `ControllerConventionTests.cs`, `ProductVisibilityServiceTests.cs` — konwencje kontrolerów, testy flagi ukrycia po stronie usług.
+
+## 3. Uruchomienie
+
+```
+dotnet tool restore
+dotnet ef database update --context SqliteDbContext --project WebStore.DAL --startup-project WebStore.Web   # raz, także po aktualizacji (nowa migracja IsHidden)
+dotnet user-secrets set "Seed:TestAccountPassword" "<hasło>" --project WebStore.Web                          # konta testowe w Development
+dotnet run --project WebStore.Web --launch-profile https      # https://localhost:7192/swagger/index.html
+cd WebStore.Web/ClientApp && npm run dev                      # klient z proxy /api i /swagger
+dotnet test                                                   # wszystkie testy (na Windows z Smart App Control: dotnet test -c Release)
+dotnet test --filter-class WebStore.Tests.Api.ProductApiTests
+dotnet test --filter-method WebStore.Tests.Api.ProductApiTests.GetById_ReturnsProduct
+```
+
+Klucz JWT w Development jest losowy; poza Development należy ustawić `JwtOptions:SecretKey` w user-secrets lub zmienną `JwtOptions__SecretKey`. Szczegóły w `README.md`.
+
+## 4. Wynik testów i weryfikacji
+
+- `dotnet build` (Debug i Release, z `--no-incremental`): 0 błędów, 0 ostrzeżeń. `dotnet list package --vulnerable --include-transitive`: brak podatnych pakietów.
+- `dotnet test` (Debug i Release): suma 309, zaliczone 303, niezaliczone 0, pominięte 6 (testy SQL Server bez `WEBSTORE_TEST_SQLSERVER`). Przed pracą: 156 testów, w tym 3 znane niezaliczone (naprawione: referencje Tests→Web, mapowanie `IsHidden`, założenie „brak kontrolerów”). Dotychczasowe testy sprintu 1 nie zostały usunięte; zmieniono tylko dwa testy architektury opisane wyżej (US-02-13 pkt 2–3).
+- Ręcznie (świeża baza SQLite poza repozytorium, hasło wygenerowane jednorazowo, API na `https://localhost:7192` i `http://localhost:5299`, `npm run dev` na porcie 5173): `/swagger/index.html` i `POST /api/AccountApi/Login` przez serwer deweloperski klienta działają (200, token); logowanie formularzem 200; błędne hasło 401 z komunikatem; brak tokenu 401; HTTP → 307 na HTTPS; `/api/Nope` 404 przy zbudowanym kliencie; `/` i `/counter` w serwerze deweloperskim 200; po zatrzymaniu API żądanie `/api/...` przez serwer deweloperski daje 502 z komunikatem. Okno „Authorize” w interfejsie Swaggera nie było klikane (sprawdzony dokument OpenAPI ze schematem Bearer).
+- Przeglądarka i Postman nie były używane.
+
+## 5. Nowe zależności i decyzje techniczne
+
+- AutoMapper 16.2.0 → **16.3.0**: wersja 16.3.0 usuwa ostrzeżenia NU1903 (GHSA-6vhm-j9h7-f9gh, GHSA-gpwp-5797-mjff); build ma 0 ostrzeżeń, a wszystkie testy przechodzą. Wersja 17.0.0 jest dostępna, ale nie została użyta (poza ustaleniem 16.x). Pakiet pobrał `dotnet restore` z NuGet; poza zapytaniami o wersje (`dotnet package search`, lista wersji w NuGet) nic więcej nie pobierano.
+- Pakiety dodane wcześniej w csproj (zweryfikowane): `Microsoft.AspNetCore.Authentication.JwtBearer` 10.0.13, `Swashbuckle.AspNetCore` 10.3.1 (Web), `Microsoft.AspNetCore.Mvc.Testing` i `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10.0.13 (Tests). Brak innych nowych pakietów.
+- Kontrolery nie zawierają logiki biznesowej. Logowanie i wydawanie tokenu są w `ILoginService`/`LoginService` w `WebStore.Web` (a nie w `WebStore.Services`), bo testy konwencji sprintu 1 wymagają dokładnie pięciu usług w projekcie Services.
+- Rozróżnienie 404 i 400 przy zapisie: usługi zgłaszają `KeyNotFoundException` zarówno dla nieistniejącego rekordu, jak i nieistniejącego powiązania. `PUT` najpierw sprawdza istnienie rekordu przez usługę (brak → 404), a `KeyNotFoundException` zgłoszony podczas zapisu oznacza brakujące powiązanie (→ 400). Dzięki temu nie zmieniano wyjątków usług (testy sprintu 1 asercją sprawdzają ich dokładny typ).
+- 409 dla drugiej faktury: kontroler faktur mapuje `InvalidOperationException` z usługi na 409 (tylko w `InvoiceApi`).
+- Konta testowe: gdy schemat bazy nie jest zaktualizowany (oczekujące migracje) lub baza jest niedostępna, aplikacja w Development nie przerywa startu, tylko loguje ostrzeżenie po polsku; migracji nie stosuje automatycznie (zgodnie z dotychczasowym przepływem z README).
+- Klucz JWT i opcje są odczytywane leniwie (`IOptions<JwtOptionsVm>`), a poprawność jest sprawdzana przy starcie (`ValidateOnStart`); błąd startu to `OptionsValidationException` z komunikatem po polsku wskazującym `JwtOptions:SecretKey`.
+- Testy: w `ApiFactory` puste wartości konfiguracji (`Seed:TestAccountPassword`, `JwtOptions:SecretKey`) nadpisują user-secrets programisty, więc wyniki nie zależą od jego środowiska; klucz i hasło są losowe, nie ma ich w repozytorium. Ostrzeżenia analizatora xUnit1051 usunięto przekazując `TestContext.Current.CancellationToken`, bez wyciszania.
+- `FormLoginInputFormatter` i `ApiFactory.Credentials` są napisane tak (przypisanie krotką), aby istniejący test czystości repozytorium (`US_01_07_…`) nie traktował pola `Password` w inicjalizatorze jako hasła zapisanego w pliku; test nie został osłabiony.
+
+## 6. Pytania do Lidera
+
+Brak otwartych pytań.

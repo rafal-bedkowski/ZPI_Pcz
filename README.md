@@ -19,7 +19,8 @@ Szczegółowe zasady projektu znajdują się w [CLAUDE.md](CLAUDE.md), a opisy r
 - **Dostęp do danych:** Entity Framework Core 10, AutoMapper 16.
 - **Baza danych:** SQLite (domyślnie, macOS) lub SQL Server (Windows: Express, instancja `SQLEXPRESS`; wybór w konfiguracji, patrz „Baza danych”).
 - **Klient:** React 19 + Vite (`WebStore.Web/ClientApp`).
-- **Testy:** xunit.v3, SQLite in-memory.
+- **API:** ASP.NET Core Web API, uwierzytelnianie tokenem JWT (Identity), dokumentacja Swagger (Swashbuckle) w środowisku Development.
+- **Testy:** xunit.v3, SQLite in-memory, testy integracyjne API przez `WebApplicationFactory`.
 
 ## Struktura repozytorium
 
@@ -31,8 +32,8 @@ WebStore.Model/       encje
 WebStore.DAL/         kontekst EF Core, konfiguracja providera, migracje
 WebStore.ViewModels/  view modele
 WebStore.Services/    usługi i mapowanie AutoMappera
-WebStore.Web/         aplikacja ASP.NET Core z klientem React (ClientApp)
-WebStore.Tests/       testy jednostkowe
+WebStore.Web/         aplikacja ASP.NET Core: kontrolery Web API i klient React (ClientApp)
+WebStore.Tests/       testy jednostkowe i integracyjne
 CLAUDE.md             zasady pracy w projekcie
 ```
 
@@ -60,13 +61,38 @@ Klient React: `npm install` i `npm run dev` w `WebStore.Web/ClientApp` (praca na
 
 ### Testy
 
-Testy z folderu `WebStore.Tests/UnitTests` (klasy `ProductServiceUnitTests`, `OrderServiceUnitTests`, `InvoiceServiceUnitTests`, `StoreServiceUnitTests`, `AddressServiceUnitTests` dziedziczące po `BaseUnitTests`) korzystają z danych startowych z `Extensions.SeedData` (źródło: `Infrastructure/TestData`); każdy test ma własną bazę SQLite w pamięci. Poniższe polecenia wykonuje się w katalogu głównym repozytorium; na komputerach, na których Smart App Control blokuje Debug (patrz wyżej), dodaj `-c Release` (poniżej w tej postaci).
+Testy integracyjne API (folder `WebStore.Tests/Api`) uruchamiają aplikację w pamięci przez `WebApplicationFactory`; każdy test ma własną bazę SQLite w pamięci i własną konfigurację JWT (losowy klucz i hasło kont testowych), więc nie wymagają user-secrets ani Node.js. Testy usług z folderu `WebStore.Tests/UnitTests` (klasy `ProductServiceUnitTests`, `OrderServiceUnitTests`, `InvoiceServiceUnitTests`, `StoreServiceUnitTests`, `AddressServiceUnitTests` dziedziczące po `BaseUnitTests`) korzystają z danych startowych z `Extensions.SeedData` (źródło: `Infrastructure/TestData`); każdy test ma własną bazę SQLite w pamięci. Poniższe polecenia wykonuje się w katalogu głównym repozytorium; na komputerach, na których Smart App Control blokuje Debug (patrz wyżej), dodaj `-c Release` (poniżej w tej postaci).
 
 - wszystkie testy: `dotnet test -c Release`,
 - pojedyncza metoda: `dotnet test -c Release --filter-method WebStore.Tests.UnitTests.ProductServiceUnitTests.UpdateProductTest`,
 - cała klasa: `dotnet test -c Release --filter-class WebStore.Tests.UnitTests.ProductServiceUnitTests`.
 
 Runner Microsoft.Testing.Platform (xunit.v3) wymaga w `--filter-method` i `--filter-class` pełnej nazwy z przestrzenią nazw (dla metody także z nazwą klasy); sama krótka nazwa (np. `UpdateProductTest`) nie wybiera żadnego testu, a polecenie kończy się kodem wyjścia 8. W tej konfiguracji działa też krótki filtr z instrukcji laboratorium, np. `dotnet test -c Release --filter UpdateProductTest` lub `--filter ProductServiceUnitTests`.
+
+## Web API
+
+Kontrolery (`WebStore.Web/Controllers`, trasy `api/<Zasób>Api`): `AccountApi`, `ProductApi`, `OrderApi`, `InvoiceApi`, `StoreApi`, `AddressApi`. Wszystkie endpointy poza `POST /api/AccountApi/Login` wymagają nagłówka `Authorization: Bearer <token>`. Logika biznesowa pozostaje w usługach (`WebStore.Services`).
+
+### Konfiguracja tokenu JWT
+
+Wydawca (`Issuer`), odbiorca (`Audience`) i czas ważności (`TokenExpirationMinutes`, 20 minut) są w sekcji `JwtOptions` pliku `appsettings.json`. Klucz podpisujący (`JwtOptions:SecretKey`, co najmniej 32 bajty) nie może trafić do repozytorium:
+
+- w środowisku Development, gdy klucz nie jest ustawiony, aplikacja losuje go przy każdym starcie (tokeny wydane przed restartem przestają działać),
+- w pozostałych środowiskach brak klucza przerywa start z komunikatem; ustaw go w user-secrets (`dotnet user-secrets set "JwtOptions:SecretKey" "<klucz>" --project WebStore.Web`) lub zmienną środowiskową `JwtOptions__SecretKey`.
+
+### Konta testowe
+
+Tylko w środowisku Development, po zastosowaniu migracji, aplikacja tworzy role `Admin` i `Customer` oraz konta `admin@webstore.local` i `customer@webstore.local`. Wspólne hasło tych kont ustawiasz w user-secrets (`dotnet user-secrets set "Seed:TestAccountPassword" "<hasło>" --project WebStore.Web`) lub zmienną środowiskową `Seed__TestAccountPassword` (co najmniej 6 znaków). Bez tego ustawienia konta nie powstają, a w logu pojawia się ostrzeżenie. Hasło nie jest przechowywane w repozytorium.
+
+### Swagger i logowanie
+
+Po `dotnet run --project WebStore.Web` (Development) dokumentacja jest pod adresem `/swagger/index.html` (np. `https://localhost:7192/swagger/index.html`; profil `https` w `launchSettings.json`). Token uzyskujesz z `POST /api/AccountApi/Login` (JSON lub formularz z polami `Login` i `Password`); odpowiedź zawiera `access_token` i `expires_in`. Token podajesz w oknie „Authorize” Swaggera (sam token, bez słowa `Bearer`) albo w nagłówku `Authorization` w Postmanie. `DELETE /api/ProductApi/{id}` ukrywa produkt (flaga w bazie), nie usuwa rekordu.
+
+Po aktualizacji repozytorium zastosuj nową migrację (flaga ukrycia produktu): `dotnet ef database update --context SqliteDbContext --project WebStore.DAL --startup-project WebStore.Web`.
+
+### Klient React a API
+
+Serwer deweloperski klienta (`npm run dev`) przekazuje żądania `/api` i `/swagger` do `WebStore.Web` (`server.proxy` w `vite.config.js`), więc nie jest potrzebny CORS. Domyślny adres serwera API to `https://localhost:7192`; inny adres ustawia zmienna środowiskowa `API_TARGET` (np. `API_TARGET=http://localhost:5299 npm run dev`).
 
 ## Baza danych
 

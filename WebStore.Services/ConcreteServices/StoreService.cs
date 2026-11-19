@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,13 @@ public class StoreService : BaseService, IStoreService
         if (!DbContext.Addresses.Any(a => a.Id == model.AddressId))
         {
             throw NotFound(nameof(Address), model.AddressId);
+        }
+
+        // Adres sklepu jest unikalny (relacja 1:1), więc zajęty adres to błąd danych, a nie wyjątek bazy.
+        var ownId = model.Id ?? 0;
+        if (DbContext.StationaryStores.Any(s => s.AddressId == model.AddressId && s.Id != ownId))
+        {
+            throw new ValidationException($"Adres {model.AddressId} jest już przypisany do innego sklepu.");
         }
 
         StationaryStore store;

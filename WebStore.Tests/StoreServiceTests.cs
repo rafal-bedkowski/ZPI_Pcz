@@ -60,6 +60,32 @@ public class StoreServiceTests
     }
 
     [Fact]
+    public void US_02_09_AddOrUpdateStore_AddressUsedByAnotherStore_ThrowsValidationAndSavesNothing()
+    {
+        Assert.Throws<System.ComponentModel.DataAnnotations.ValidationException>(() => _service.AddOrUpdateStore(
+            new AddOrUpdateStoreVm { Name = "Nowy", AddressId = TestData.StoreAddressId }));
+
+        var other = _service.AddOrUpdateStore(new AddOrUpdateStoreVm { Name = "Drugi", AddressId = TestData.FreeAddressId });
+        Assert.Throws<System.ComponentModel.DataAnnotations.ValidationException>(() => _service.AddOrUpdateStore(
+            new AddOrUpdateStoreVm { Id = other.Id, Name = "Drugi", AddressId = TestData.StoreAddressId }));
+
+        Assert.True(_logger.HasError<System.ComponentModel.DataAnnotations.ValidationException>());
+        Assert.Equal(2, _db.StationaryStores.Count());
+        Assert.Equal(TestData.FreeAddressId, _db.StationaryStores.Single(s => s.Id == other.Id).AddressId);
+    }
+
+    [Fact]
+    public void US_02_09_AddOrUpdateStore_OwnAddress_IsAccepted()
+    {
+        var result = _service.AddOrUpdateStore(new AddOrUpdateStoreVm
+        {
+            Id = TestData.StoreId, Name = "Ten sam adres", AddressId = TestData.StoreAddressId
+        });
+
+        Assert.Equal(TestData.StoreAddressId, result.Address!.Id);
+    }
+
+    [Fact]
     public void US_01_13_GetStore_AndGetStores_FilterCorrectly()
     {
         Assert.Equal("Sklep Centralny", _service.GetStore(s => s.Id == TestData.StoreId)!.Name);

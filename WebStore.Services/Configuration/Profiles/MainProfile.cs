@@ -14,6 +14,8 @@ public class MainProfile : Profile
             .ForMember(d => d.Id, o => o.Ignore())
             // Brak obrazu w modelu wejściowym oznacza "bez zmian", nie "usuń".
             .ForMember(d => d.ImageBytes, o => o.Condition(s => s.ImageBytes != null))
+            // Flagę ukrycia ustawia wyłącznie IProductService.HideProduct.
+            .ForMember(d => d.IsHidden, o => o.Ignore())
             .ForMember(d => d.Category, o => o.Ignore())
             .ForMember(d => d.Supplier, o => o.Ignore())
             .ForMember(d => d.ProductStocks, o => o.Ignore());

@@ -64,6 +64,17 @@ Uzgodniony z Liderem na podstawie wymagań sprintu 1:
 - Testy API: integracyjne (`WebApplicationFactory`) w `WebStore.Tests`.
 - Docelowo SQL Server ma zostać bazą podstawową (SQLite jako wariant, m.in. dla macOS); zmiana domyślnego providera nie wchodzi w zakres sprintu 2.
 
+## Stan projektu i otwarte sprawy
+
+Sprinty 1 i 2 są zamknięte: wszystkie user stories mają status `Zweryfikowana`, `dotnet build` nie zgłasza błędów ani ostrzeżeń, a `dotnet test` przechodzi (część testów jest pomijana, patrz niżej). Szczegóły i mapowanie kryteriów na testy znajdują się w `sprinty/sprint-NN/raport-implementacji.md` i `raport-recenzji.md`. Następny sprint rozpoczyna się po umieszczeniu nowego PDF w `wymagania/`.
+
+Otwarte sprawy:
+
+- Do zweryfikowania na Windowsie z ustawioną zmienną `WEBSTORE_TEST_SQLSERVER`: pominięte testy wariantu SQL Server oraz kryteria US-02-02 pkt 8 i US-02-06 pkt 10 (na SQLite są zaliczone). Dopóki nie zostaną zweryfikowane, są to jedyne niepotwierdzone kryteria sprintu 2.
+- Znane i zaakceptowane przez Lidera ograniczenie: przy równoległych `POST` faktury dla tego samego zamówienia drugie żądanie może zakończyć się odpowiedzią 500 zamiast 409 (wyjątek unikalnego indeksu bazy).
+- Do ustalenia z prowadzącym: dopuszczalność SQLite jako domyślnej bazy zamiast SQL Server.
+- Drobne uwagi recenzji sprintu 2 (podwójne logowanie błędu 500, różny czas odpowiedzi logowania dla nieistniejącego loginu, kłódka przy publicznym `Login` w Swagger UI, pełny stack trace przy braku klucza JWT poza Development, zdublowane testy usług) pozostają bez zmian i nie blokują pracy.
+
 ## Środowisko
 
 Praca odbywa się na macOS i Windowsie. Wymagane narzędzia:

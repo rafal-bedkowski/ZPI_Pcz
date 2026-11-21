@@ -77,7 +77,7 @@ Uwagi ogólne:
 7. **Zakładając, że** repozytorium jest sprawdzone, **gdy** zostaną przejrzone jego pliki (w tym `appsettings*.json`, `README`), **wtedy** nie występuje w nich klucz podpisujący JWT ani hasła kont testowych (zgodnie z `CLAUDE.md`).
 8. **Zakładając, że** aplikacja jest uruchomiona na SQLite (domyślnie) lub na SQL Server (skonfigurowanym jak w sprincie 1), **gdy** zostanie wykonane logowanie i wywołanie chronionego endpointu, **wtedy** działają tak samo na obu providerach bez zmian w modelu i usługach.
 
-**Uwagi:** Zależy od US-01-06 (kontekst z Identity, `User`). Czas wydania i wygaśnięcia tokenu jest w UTC (US-02-03). Konta, na których działa logowanie: US-02-03. Pkt 8 jest zweryfikowany na SQLite; jego weryfikacja na SQL Server (zmienna `WEBSTORE_TEST_SQLSERVER`) zostanie wykonana na Windowsie.
+**Uwagi:** Zależy od US-01-06 (kontekst z Identity, `User`). Czas wydania i wygaśnięcia tokenu jest w UTC (US-02-03). Konta, na których działa logowanie: US-02-03. Pkt 8 ma testy zarówno na SQLite, jak i na SQL Server; test na SQL Server jest uruchamiany, gdy ustawiona jest zmienna `WEBSTORE_TEST_SQLSERVER`.
 
 ---
 
@@ -182,7 +182,7 @@ Logowanie:
 10. **Zakładając, że** cena z częścią ułamkową (np. 19,99) została wysłana w JSON, **gdy** produkt zostanie zapisany i pobrany `GET /api/ProductApi/{id}`, **wtedy** `Price` jest identyczna jak wysłana (bez błędów zaokrągleń), na każdym providerze bazy.
 11. **Zakładając, że** żądanie nie ma poprawnego tokenu, **gdy** zostanie wysłane `POST` lub `PUT`, **wtedy** odpowiedź ma kod 401 i nic nie jest zapisane.
 
-**Uwagi:** Reguły walidacji i zapisu pozostają w `ProductService`; kontroler rozróżnia dodanie i modyfikację tylko na podstawie metody HTTP i `Id` (kryteria 3–4). Pkt 10 jest zweryfikowany na SQLite; jego weryfikacja na SQL Server (zmienna `WEBSTORE_TEST_SQLSERVER`) zostanie wykonana na Windowsie. Zależy od US-02-01 i US-02-02.
+**Uwagi:** Reguły walidacji i zapisu pozostają w `ProductService`; kontroler rozróżnia dodanie i modyfikację tylko na podstawie metody HTTP i `Id` (kryteria 3–4). Pkt 10 ma testy zarówno na SQLite, jak i na SQL Server; test na SQL Server jest uruchamiany, gdy ustawiona jest zmienna `WEBSTORE_TEST_SQLSERVER`. Zależy od US-02-01 i US-02-02.
 
 ---
 

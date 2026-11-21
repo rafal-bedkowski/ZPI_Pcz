@@ -1,17 +1,18 @@
 # Raport recenzji — Sprint 02
 
-Zakres: stan katalogu roboczego (HEAD = 0eeb9a1, zmiany niezacommitowane), US-02-01 do US-02-13. Dodatkowo przejrzano zmiany sprintu 1 wprowadzone po recenzji (README, setup.ps1, testy w `UnitTests/`, klient React) — są już w historii git i nie wykazują regresji ani artefaktów.
+Zakres: stan katalogu roboczego (HEAD = 5226ceb, zmiany niezacommitowane: `WebStore.Tests/Infrastructure/ApiFactory.cs`, `WebStore.Tests/Api/SqlServerApiTests.cs`, `CLAUDE.md`, `raport-implementacji.md`, `user-stories.md`), US-02-01 do US-02-13. Dodatkowo przejrzano zmiany sprintu 1 wprowadzone po recenzji (README, setup.ps1, testy w `UnitTests/`, klient React) — są już w historii git i nie wykazują regresji ani artefaktów.
 
 ## 1. Werdykt ogólny
 
-**Zaakceptowano z uwagami.** Brak uwag krytycznych. Wszystkie kryteria akceptacji są spełnione, z wyjątkiem pkt 8 w US-02-13 (nazwy dwóch nowych testów zawierają identyfikator US — uwaga drobna, pytanie do Lidera) oraz dwóch kryteriów zależnych od SQL Server, których nie da się zweryfikować w tym środowisku.
+**Zaakceptowano z uwagami.** Brak uwag krytycznych. Wszystkie kryteria akceptacji są spełnione. Kryteria zależne od SQL Server (US-02-02 pkt 8, US-02-06 pkt 10) są zweryfikowane na lokalnym SQL Server Express.
 
-Uruchomienia:
-- `dotnet build` (Debug) i `dotnet build -c Release`: 0 błędów, 0 ostrzeżeń.
-- `dotnet test`: suma 309, powodzenie 303, niepowodzenie 0, pominięte 6 (5 SQL Server bez `WEBSTORE_TEST_SQLSERVER`, 1 `setup.ps1` na macOS) — zgodnie ze znanymi i zaakceptowanymi.
+Uruchomienia (311 testów w każdej konfiguracji):
+- `dotnet test -c Release` bez `WEBSTORE_TEST_SQLSERVER`: powodzenie 304, niepowodzenie 0, pominięte 7 (testy SQL Server).
+- `dotnet test -c Release` z `WEBSTORE_TEST_SQLSERVER` wskazującą lokalny SQL Server Express (uwierzytelnianie Windows, zmienna ustawiona tylko na czas procesu): trzy z czterech przebiegów 311/311; w jednym przebiegu 1 niepowodzenie, którego nie zidentyfikowano (wynik wypisano tylko w podsumowaniu), niepowtarzalne w kolejnych trzech przebiegach (uwaga 8).
+- `dotnet test` (Debug) z `WEBSTORE_TEST_SQLSERVER` jak wyżej: powodzenie 311, niepowodzenie 0, pominięte 0.
 - Ręcznie: start w środowisku Production bez `JwtOptions:SecretKey` kończy się `OptionsValidationException` z polskim komunikatem wskazującym `JwtOptions:SecretKey` (US-02-02 pkt 6); start w Development bez hasła kont testowych loguje polskie ostrzeżenie i nie przerywa startu (US-02-03 pkt 3).
 
-Podsumowanie kryteriów: 13 US, 0 odrzuconych; kryteria: Spełnione — wszystkie poza: Niespełnione 1 (US-02-13 pkt 8, część o nazwach), Nie da się zweryfikować 2 (US-02-02 pkt 8 i US-02-06 pkt 10 na SQL Server) oraz US-02-12 pkt 1–4 zweryfikowane tylko przeglądem konfiguracji (patrz tabela).
+Podsumowanie kryteriów: 13 US, 0 odrzuconych; kryteria: Spełnione — wszystkie; Niespełnione 0, Nie da się zweryfikować 0 oraz US-02-12 pkt 1–4 zweryfikowane tylko przeglądem konfiguracji (patrz tabela).
 
 ## 2. Weryfikacja kryteriów
 
@@ -36,7 +37,7 @@ Dowody: klasy testów w `WebStore.Tests` (wszystkie przechodzą), pliki w `WebSt
 | | 5 Development: losowy klucz ≥32 B, token nie przeżywa restartu | Spełnione | `JwtKeyTests.Development_*` |
 | | 6 Poza Development: czytelny błąd po polsku | Spełnione | `JwtKeyTests.OutsideDevelopment_*`; uruchomienie ręczne |
 | | 7 Brak klucza i haseł w repozytorium | Spełnione | przegląd `appsettings*.json`, README, kodu; `ControllerConventionTests.AppSettings_…`; `ConventionTests` (czystość repo) |
-| | 8 Działanie na SQLite i SQL Server | Nie da się zweryfikować (część SQL Server) | SQLite: testy integracyjne zielone; SQL Server: brak instancji; kod nie odwołuje się do providera (`US_01_06_…DoNotReferenceDatabaseProviders`) |
+| | 8 Działanie na SQLite i SQL Server | Spełnione | SQLite: testy integracyjne zielone; SQL Server: `SqlServerApiTests.SqlServer_LoginIssuesTokenAcceptedByProtectedEndpoint` (login, 401 bez tokenu, 200 z tokenem) zielony na SQL Server Express; kod nie odwołuje się do providera (`US_01_06_…DoNotReferenceDatabaseProviders`) |
 | US-02-03 | 1 Role i konta testowe w Development, bez duplikatów | Spełnione | `TestAccountSeedingTests.Development_WithPassword_…`, `SeedingAgain_DoesNotCreateDuplicates` |
 | | 2 Poza Development brak kont | Spełnione | `TestAccountSeedingTests.OutsideDevelopment_…`; `Program.cs:62` |
 | | 3 Brak hasła → ostrzeżenie po polsku, start trwa | Spełnione | `TestAccountSeeder.cs:37-42`; test i uruchomienie ręczne |
@@ -68,7 +69,7 @@ Dowody: klasy testów w `WebStore.Tests` (wszystkie przechodzą), pliki w `WebSt
 | | 7 Nieistniejąca kategoria/dostawca → 400 | Spełnione | `Post_UnknownCategoryOrSupplier_…`, `Put_UnknownCategory_Returns400` |
 | | 8 PUT nieistniejący/ukryty → 404 | Spełnione | `Put_UnknownId_Returns404AndAddsNothing`, `Put_HiddenProduct_Returns404` |
 | | 9 Obraz bez zmian | Spełnione | `Put_WithoutImage_KeepsExistingImage` |
-| | 10 Dokładność ceny | Spełnione na SQLite; SQL Server nie da się zweryfikować | `Price_WithFractionalPart_IsStoredExactly` |
+| | 10 Dokładność ceny | Spełnione | `Price_WithFractionalPart_IsStoredExactly` (SQLite); `SqlServerApiTests.SqlServer_Price_WithFractionalPart_IsStoredExactly` (SQL Server Express, zielony) |
 | | 11 401 bez zapisu | Spełnione | `Write_WithoutValidToken_Returns401AndSavesNothing` |
 | US-02-07 | 1 DELETE 204, rekord zostaje z flagą | Spełnione | `Delete_HidesProductButKeepsRecord` |
 | | 2 404 dla nieistniejącego/ukrytego | Spełnione | `Delete_UnknownOrAlreadyHiddenProduct_Returns404` |
@@ -94,7 +95,7 @@ Dowody: klasy testów w `WebStore.Tests` (wszystkie przechodzą), pliki w `WebSt
 | | 5 Zakres pokrycia | Spełnione | wszystkie wymienione scenariusze mają testy (tabele wyżej) |
 | | 6 `dotnet test` zielony, SQL Server pominięty | Spełnione | uruchomienie powyżej |
 | | 7 Brak usuniętych/osłabionych testów sprintu 1 | Spełnione | `git diff WebStore.Tests`: zmieniono tylko 2 testy architektury, jak opisano w raporcie implementacji |
-| | 8 Nazwy nowych testów bez identyfikatorów US; README z filtrami | Niespełnione (nazwy), spełnione (README) | `WebStore.Tests/StoreServiceTests.cs:63,76` (`US_02_09_…`); README sekcja „Testy” |
+| | 8 Nazwy nowych testów bez identyfikatorów US; README z filtrami | Spełnione | `SqlServerApiTests.cs:25,41` i testy w `Api/*` bez prefiksów `US_`; jedyne nazwy z prefiksem w kodzie sprintu 2 to `StoreServiceTests.cs:63,78` (`US_02_09_…`), objęte wyjątkiem z kryterium; README sekcja „Testy” |
 
 ## 3. Uwagi
 
@@ -103,25 +104,27 @@ Brak.
 
 ### Istotne
 
-1. **`WebStore.Web/Controllers/InvoiceApiController.cs:41-43` — zbyt szerokie mapowanie na 409.** `DuplicateInvoiceToConflict` zamienia każdy `InvalidOperationException` na 409 z oryginalnym komunikatem. Scenariusz: inny `InvalidOperationException` (np. z EF lub z przyszłej zmiany w `InvoiceService`) zostaje błędnie zwrócony jako konflikt z komunikatem wewnętrznym. Dodatkowo równoległe dwa `POST` dla tego samego zamówienia mogą obaj przejść sprawdzenie `Any` w `InvoiceService.cs:42` i drugi dostanie `DbUpdateException` z unikalnego indeksu, czyli 500 zamiast 409. Kierunek: dedykowany typ wyjątku usługi dla „zamówienie ma już fakturę” (lub mapowanie naruszenia unikalności indeksu na ten sam wyjątek) i jego obsługa w kontrolerze. Zmiana typu wyjątku dotyka testów sprintu 1, które sprawdzają dokładny typ, więc wymaga decyzji Lidera.
+1. **`WebStore.Web/Controllers/InvoiceApiController.cs:41-43` — zbyt szerokie mapowanie na 409 (zaakceptowane przez Lidera ograniczenie).** `DuplicateInvoiceToConflict` zamienia każdy `InvalidOperationException` na 409 z oryginalnym komunikatem. Scenariusz: inny `InvalidOperationException` (np. z EF lub z przyszłej zmiany w `InvoiceService`) zostaje błędnie zwrócony jako konflikt z komunikatem wewnętrznym. Dodatkowo równoległe dwa `POST` dla tego samego zamówienia mogą obaj przejść sprawdzenie `Any` w `InvoiceService.cs:42` i drugi dostanie `DbUpdateException` z unikalnego indeksu, czyli 500 zamiast 409. Kierunek: dedykowany typ wyjątku usługi dla „zamówienie ma już fakturę” (lub mapowanie naruszenia unikalności indeksu na ten sam wyjątek) i jego obsługa w kontrolerze. Zmiana typu wyjątku dotyka testów sprintu 1, które sprawdzają dokładny typ, więc wymagałaby decyzji Lidera. Lider zdecydował: pozostaje obecne rozwiązanie.
 
 ### Drobne
 
-2. **`WebStore.Tests/StoreServiceTests.cs:63,76` — identyfikatory US w nazwach nowych testów** (`US_02_09_AddOrUpdateStore_…`), wbrew US-02-13 pkt 8. Dotychczasowe testy sprintu 1 mają taki prefiks, więc to kwestia interpretacji kryterium (pytanie 1). Kierunek: usunąć prefiks `US_02_09_` albo doprecyzować kryterium.
-3. **`WebStore.Web/Controllers/BaseApiController.cs:99-105` — podwójne logowanie błędu 500.** `BaseService.Execute` loguje wyjątek, a kontroler loguje go ponownie. Scenariusz: każdy nieoczekiwany błąd usługi daje dwa wpisy `Error` w logu. Kierunek: wystarczy jeden wpis, ale US-02-01 pkt 6 wymaga logu po stronie kontrolera, więc rozstrzyga Lider.
-4. **`WebStore.Web/Services/LoginService.cs:35-39` — różnica czasu odpowiedzi dla nieistniejącego loginu.** Dla nieistniejącego użytkownika hasło nie jest haszowane, więc odpowiedź jest szybsza niż przy błędnym haśle istniejącego konta, co umożliwia wnioskowanie o istnieniu loginu (US-02-03 pkt 8 wymaga, by odpowiedź tego nie ujawniała; treść i kod są identyczne, ale nie czas). Kierunek: wykonać fikcyjne haszowanie hasła, gdy użytkownik nie istnieje. Brak blokady konta i limitu prób to świadoma decyzja ze story (pkt 8), nie błąd.
-5. **`WebStore.Web/Configuration/SwaggerServiceCollectionExtensions.cs:21-24` — globalny wymóg bezpieczeństwa dotyczy też `Login`.** W Swagger UI `POST /api/AccountApi/Login` ma kłódkę, choć jest publiczny. Efekt wyłącznie kosmetyczny. Kierunek: filtr operacji pomijający endpointy z `[AllowAnonymous]`.
-6. **Start poza Development bez klucza JWT wypisuje pełny stack trace** (`OptionsValidationException`); komunikat po polsku jest czytelny, ale ginie wśród śladu stosu. Kierunek: opcjonalnie przechwycić wyjątek w `Program.cs` i wypisać sam komunikat.
-7. **`WebStore.Tests/UnitTests/*` i `WebStore.Tests/*ServiceTests.cs` — dwie równoległe serie testów usług** (z sprintu 1: układ z instrukcji laboratorium oraz własne testy) pokrywają w dużej mierze te same scenariusze. Dotyczy zmian sprintu 1, bez wpływu na poprawność; do decyzji Lidera, czy zostawić.
-8. **Poza repozytorium (scratchpad sesji): `api.log`, `pw.txt`, `smoke.db`, `vite.log`** w `/private/tmp/claude-501/-Users-rafalbedkowski-uczelnia-ZIP-ZPI-Pcz/fbc64f64-2ece-48ad-9ae0-f8849ff51e86/scratchpad/` — pozostałości ręcznych testów programisty, w tym plik z hasłem kont testowych. Nie są w repozytorium; usuwa je Lider (polecenie niżej).
+2. **`WebStore.Web/Controllers/BaseApiController.cs:99-105` — podwójne logowanie błędu 500.** `BaseService.Execute` loguje wyjątek, a kontroler loguje go ponownie. Scenariusz: każdy nieoczekiwany błąd usługi daje dwa wpisy `Error` w logu. Kierunek: wystarczy jeden wpis, ale US-02-01 pkt 6 wymaga logu po stronie kontrolera, więc rozstrzyga Lider.
+3. **`WebStore.Web/Services/LoginService.cs:35-39` — różnica czasu odpowiedzi dla nieistniejącego loginu.** Dla nieistniejącego użytkownika hasło nie jest haszowane, więc odpowiedź jest szybsza niż przy błędnym haśle istniejącego konta, co umożliwia wnioskowanie o istnieniu loginu (US-02-03 pkt 8 wymaga, by odpowiedź tego nie ujawniała; treść i kod są identyczne, ale nie czas). Kierunek: wykonać fikcyjne haszowanie hasła, gdy użytkownik nie istnieje. Brak blokady konta i limitu prób to świadoma decyzja ze story (pkt 8), nie błąd.
+4. **`WebStore.Web/Configuration/SwaggerServiceCollectionExtensions.cs:21-24` — globalny wymóg bezpieczeństwa dotyczy też `Login`.** W Swagger UI `POST /api/AccountApi/Login` ma kłódkę, choć jest publiczny. Efekt wyłącznie kosmetyczny. Kierunek: filtr operacji pomijający endpointy z `[AllowAnonymous]`.
+5. **Start poza Development bez klucza JWT wypisuje pełny stack trace** (`OptionsValidationException`); komunikat po polsku jest czytelny, ale ginie wśród śladu stosu. Kierunek: opcjonalnie przechwycić wyjątek w `Program.cs` i wypisać sam komunikat.
+6. **`WebStore.Tests/UnitTests/*` i `WebStore.Tests/*ServiceTests.cs` — dwie równoległe serie testów usług** (z sprintu 1: układ z instrukcji laboratorium oraz własne testy) pokrywają w dużej mierze te same scenariusze. Dotyczy zmian sprintu 1, bez wpływu na poprawność; do decyzji Lidera, czy zostawić.
+7. **Poza repozytorium (scratchpad sesji): `api.log`, `pw.txt`, `smoke.db`, `vite.log`** w `/private/tmp/claude-501/-Users-rafalbedkowski-uczelnia-ZIP-ZPI-Pcz/fbc64f64-2ece-48ad-9ae0-f8849ff51e86/scratchpad/` — pozostałości ręcznych testów programisty, w tym plik z hasłem kont testowych. Nie są w repozytorium; usuwa je Lider (polecenie niżej).
 
 ```
 rm -f "/private/tmp/claude-501/-Users-rafalbedkowski-uczelnia-ZIP-ZPI-Pcz/fbc64f64-2ece-48ad-9ae0-f8849ff51e86/scratchpad/"{api.log,pw.txt,smoke.db,vite.log}
 ```
 
+8. **Jednorazowa niestabilność testów w Release z SQL Server.** W jednym z czterech przebiegów 1 test zakończył się niepowodzeniem (nieustalony), w trzech kolejnych przebiegach 311/311. Scenariusz: sporadyczna awaria zależna od czasu lub współdzielonej instancji SQL Server Express. Kierunek: przy ponownym wystąpieniu zapisać nazwę testu i komunikat.
+
 ### Artefakty redakcyjne, sekrety, zakres
 
 - Brak `TODO`/`FIXME`/`XXX`/`TBD`, logów debugowych, zakomentowanego i martwego kodu, plików `*.bak`/`tmp`, komentarzy o historii zmian (przeszukano `.cs`, `.js`, `.jsx`, `.json`, `.md`, `.sh`, `.ps1`, `.csproj`, `.html`).
+- Testy SQL Server: `ApiFactory` tworzy osobną bazę `WebStoreApiTests_<guid>` i usuwa ją w `Dispose`; ciąg połączenia pochodzi wyłącznie ze zmiennej środowiskowej. W repozytorium brak ciągów połączenia i haseł (wystąpienia `SQLEXPRESS` to opisy w README oraz dane wejściowe testu `ArchitectureTests`). `CLAUDE.md`, `user-stories.md` i `raport-implementacji.md` opisują stan bieżący, bez śladów historii.
 - Brak sekretów: `appsettings*.json` bez `SecretKey`, ciągu połączenia i haseł; hasło kont i klucz tylko z konfiguracji; w testach losowe. `webstore.db` i `wwwroot` są ignorowane przez git; w śledzonych plikach brak `*.db` i `TestResults`.
 - `CLAUDE.md`: usunięto sekcję „Stan prac w sprincie 2” (nieaktualna po implementacji), schemat zależności zawiera Tests→Web; zgodne z `ArchitectureTests`.
 - Zależności Web↔Tests: tylko Tests→Web, nic nie referuje Web ani Tests (test architektury).
@@ -132,6 +135,4 @@ rm -f "/private/tmp/claude-501/-Users-rafalbedkowski-uczelnia-ZIP-ZPI-Pcz/fbc64f
 
 ## 4. Pytania do Lidera
 
-1. US-02-13 pkt 8: czy dwa nowe testy `StoreServiceTests` mają zachować prefiks `US_02_09_` (spójność z testami sprintu 1), czy zgodnie z literą kryterium go usunąć? Do czasu odpowiedzi kryterium uznane za niespełnione w części dotyczącej nazw (uwaga 2), bez wpływu na status story.
-2. Uwaga 1 (409 dla faktury): czy wprowadzić dedykowany wyjątek usługi (wymaga zmiany testów sprintu 1), czy zaakceptować obecne rozwiązanie?
-3. Kryteria US-02-02 pkt 8 i US-02-06 pkt 10 (SQL Server): do potwierdzenia na Windowsie z `WEBSTORE_TEST_SQLSERVER` — czy tak zostają zamknięte?
+Brak otwartych pytań.

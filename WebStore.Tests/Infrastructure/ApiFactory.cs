@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -22,6 +23,7 @@ using WebStore.ViewModels.VM;
 namespace WebStore.Tests.Infrastructure;
 
 // Aplikacja uruchomiona w pamięci z własną bazą SQLite (z danymi startowymi z TestData) oraz własną konfiguracją JWT.
+// Po ustawieniu SqlServerConnectionString zamiast SQLite używa osobnej bazy SQL Server o losowej nazwie, usuwanej przy zwolnieniu fabryki.
 // Klucz i hasło kont testowych są losowe dla każdej instancji, więc nie ma ich w repozytorium.
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
@@ -29,6 +31,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string CustomerLogin = "customer@webstore.local";
 
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    private string? _sqlServerDatabaseConnection;
 
     public string EnvironmentName { get; init; } = "Development";
     public string Issuer { get; init; } = "webstore-test-issuer";
@@ -37,6 +40,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public string? TestAccountPassword { get; init; } = NewSecret();
     // Katalog z wwwroot/index.html udającym zbudowanego klienta (zamiast katalogu projektu Web).
     public string? ContentRoot { get; init; }
+    // Ciąg połączenia z instancją SQL Server (bez nazwy bazy); nazwę bazy nadaje fabryka.
+    public string? SqlServerConnectionString { get; init; }
     public string? HttpsPort { get; init; }
     public Action<IServiceCollection>? ConfigureServices { get; init; }
     public CapturingLoggerProvider Logs { get; } = new();
@@ -54,8 +59,21 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         _connection.Open();
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options;
-        using (var db = new ApplicationDbContext(options))
+        Action<DbContextOptionsBuilder> useDatabase;
+        if (SqlServerConnectionString is null)
+        {
+            useDatabase = o => o.UseSqlite(_connection);
+        }
+        else
+        {
+            _sqlServerDatabaseConnection = new SqlConnectionStringBuilder(SqlServerConnectionString)
+            {
+                InitialCatalog = $"WebStoreApiTests_{Guid.NewGuid():N}"
+            }.ConnectionString;
+            useDatabase = o => o.UseSqlServer(_sqlServerDatabaseConnection);
+        }
+
+        using (var db = new ApplicationDbContext(CreateOptions(useDatabase)))
         {
             db.Database.EnsureCreated();
             TestData.Seed(db);
@@ -95,7 +113,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<SqliteDbContext>();
             services.RemoveAll<SqlServerDbContext>();
             services.RemoveAll<ApplicationDbContext>();
-            services.AddDbContext<ApplicationDbContext>(o => o.UseSqlite(_connection));
+            services.AddDbContext<ApplicationDbContext>(useDatabase);
 
             if (ContentRoot is not null)
             {
@@ -108,11 +126,24 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         });
     }
 
+    private static DbContextOptions<ApplicationDbContext> CreateOptions(Action<DbContextOptionsBuilder> useDatabase)
+    {
+        var builder = new DbContextOptionsBuilder<ApplicationDbContext>();
+        useDatabase(builder);
+        return builder.Options;
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
         if (disposing)
         {
+            if (_sqlServerDatabaseConnection is not null)
+            {
+                using var db = new ApplicationDbContext(CreateOptions(o => o.UseSqlServer(_sqlServerDatabaseConnection)));
+                db.Database.EnsureDeleted();
+            }
+
             _connection.Dispose();
         }
     }

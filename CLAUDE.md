@@ -70,7 +70,11 @@ Sprinty 1 i 2 są zamknięte: wszystkie user stories mają status `Zweryfikowana
 
 Otwarte sprawy:
 
-- Znane i zaakceptowane przez Lidera ograniczenie: przy równoległych `POST` faktury dla tego samego zamówienia drugie żądanie może zakończyć się odpowiedzią 500 zamiast 409 (wyjątek unikalnego indeksu bazy).
+Ustalenia Lidera do podjęcia po wznowieniu prac (do doprecyzowania przed startem; żadne nie jest rozpoczęte):
+
+- Przejście na SQL Server jako bazę domyślną (SQLite pozostaje wariantem, m.in. dla macOS): wymaga ustalenia zachowania bez konfiguracji, źródła ciągu połączenia (bez ciągu w repozytorium) oraz zmian w testach, `setup.ps1` i zapisach o bazie w tym dokumencie.
+- Analiza niestabilnego testu: jednorazowa porażka jednego testu w przebiegu Release z `WEBSTORE_TEST_SQLSERVER` (kolejne przebiegi 311/311); do ustalenia, który test i dlaczego (wielokrotne uruchomienia, zapis nazw niezaliczonych testów).
+- Poprawka obsługi duplikatu faktury: przy równoległych `POST` dla tego samego zamówienia drugie żądanie może zakończyć się odpowiedzią 500 zamiast 409 (wyjątek unikalnego indeksu bazy); Lider zdecydował, że należy to poprawić (wymaga m.in. dedykowanego wyjątku usługi i dostosowania testów sprintu 1).
 - Do ustalenia z prowadzącym: dopuszczalność SQLite jako domyślnej bazy zamiast SQL Server.
 - Drobne uwagi recenzji sprintu 2 (podwójne logowanie błędu 500, różny czas odpowiedzi logowania dla nieistniejącego loginu, kłódka przy publicznym `Login` w Swagger UI, pełny stack trace przy braku klucza JWT poza Development, zdublowane testy usług) pozostają bez zmian i nie blokują pracy.
 

@@ -1,7 +1,10 @@
+using AutoMapper;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WebStore.DAL.EF;
 using WebStore.Model.DataModels;
 using WebStore.Services.ConcreteServices;
+using WebStore.Services.Exceptions;
 using WebStore.Services.Interfaces;
 using WebStore.Tests.Infrastructure;
 using WebStore.ViewModels.VM;
@@ -13,12 +16,17 @@ public class InvoiceServiceTests
     private readonly IInvoiceService _service;
     private readonly ApplicationDbContext _db;
     private readonly TestLogger _logger;
+    private readonly SqliteConnection _connection;
+    private readonly IMapper _mapper;
 
-    public InvoiceServiceTests(IInvoiceService service, ApplicationDbContext db, TestLogger logger)
+    public InvoiceServiceTests(IInvoiceService service, ApplicationDbContext db, TestLogger logger,
+        SqliteConnection connection, IMapper mapper)
     {
         _service = service;
         _db = db;
         _logger = logger;
+        _connection = connection;
+        _mapper = mapper;
     }
 
     private int NewOrder()
@@ -84,9 +92,28 @@ public class InvoiceServiceTests
         var orderId = NewOrder();
         _service.AddOrUpdateInvoice(NewInvoice(orderId));
 
-        Assert.Throws<InvalidOperationException>(() => _service.AddOrUpdateInvoice(NewInvoice(orderId, number: "FV/2")));
+        Assert.Throws<DuplicateInvoiceException>(() => _service.AddOrUpdateInvoice(NewInvoice(orderId, number: "FV/2")));
 
         Assert.Equal(1, _db.Invoices.Count());
+    }
+
+    [Fact]
+    public void AddOrUpdateInvoice_DuplicateCreatedConcurrently_ThrowsDuplicateInvoiceException()
+    {
+        var orderId = NewOrder();
+        // Konkurencyjna faktura trafia do bazy dokładnie między sprawdzeniem duplikatu a zapisem,
+        // więc odrzuca ją dopiero unikalny indeks bazy.
+        var interceptor = new BeforeFirstSaveInterceptor(() => _service.AddOrUpdateInvoice(NewInvoice(orderId, number: "FV/konkurent")));
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).AddInterceptors(interceptor).Options;
+        using var racingDb = new ApplicationDbContext(options);
+        var racingService = new InvoiceService(racingDb, _mapper, _logger);
+
+        var ex = Assert.Throws<DuplicateInvoiceException>(() => racingService.AddOrUpdateInvoice(NewInvoice(orderId, number: "FV/2")));
+
+        Assert.Equal(orderId, ex.OrderId);
+        Assert.IsType<DbUpdateException>(ex.InnerException);
+        Assert.Equal("FV/konkurent", _db.Invoices.AsNoTracking().Single().InvoiceNumber);
+        Assert.True(_logger.HasError<DuplicateInvoiceException>());
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using WebStore.DAL.EF;
 using WebStore.Model.DataModels;
+using WebStore.Services.Exceptions;
 using WebStore.Services.Interfaces;
 using WebStore.ViewModels.VM;
 
@@ -33,7 +34,7 @@ public class InvoiceService : BaseService, IInvoiceService
         // Zamówienie ma co najwyżej jedną fakturę (relacja 1:1).
         if (DbContext.Invoices.Any(i => i.OrderId == model.OrderId && i.Id != (existing != null ? existing.Id : 0)))
         {
-            throw new InvalidOperationException($"Zamówienie {model.OrderId} ma już fakturę.");
+            throw new DuplicateInvoiceException(model.OrderId);
         }
 
         Invoice invoice;
@@ -51,9 +52,28 @@ public class InvoiceService : BaseService, IInvoiceService
         // Kwota faktury zawsze pochodzi z zamówienia, wywołujący nie może jej podać.
         invoice.TotalAmount = order.TotalAmount;
 
-        DbContext.SaveChanges();
+        try
+        {
+            DbContext.SaveChanges();
+        }
+        catch (DbUpdateException ex)
+        {
+            // Równoległe żądanie mogło zapisać fakturę po naszym sprawdzeniu; wtedy unikalny indeks bazy odrzucił duplikat.
+            if (IsInvoiceAlreadyStoredForOrder(model.OrderId, existing?.Id ?? 0))
+            {
+                throw new DuplicateInvoiceException(model.OrderId, ex);
+            }
+
+            throw;
+        }
+
         return Mapper.Map<InvoiceVm>(invoice);
     });
+
+    // Provider-neutralny sposób rozpoznania naruszenia unikalnego indeksu: po nieudanym zapisie sprawdzamy w bazie,
+    // czy inna faktura tego zamówienia faktycznie istnieje (inne przyczyny błędu zapisu nie są zamieniane na konflikt).
+    private bool IsInvoiceAlreadyStoredForOrder(int orderId, int ownInvoiceId) =>
+        DbContext.Invoices.AsNoTracking().Any(i => i.OrderId == orderId && i.Id != ownInvoiceId);
 
     public InvoiceVm? GetInvoice(Expression<Func<Invoice, bool>> filter) => Execute(nameof(GetInvoice), () =>
     {

@@ -42,9 +42,9 @@ Uzgodniony z Liderem na podstawie wymagań sprintu 1:
 
 - Serwer: .NET 10 (LTS), C#, jedna wersja platformy dla całej solucji, przypięta w `global.json`.
 - ORM: Entity Framework Core 10.x.
-- Baza danych: SQLite domyślnie; SQL Server jako wariant alternatywny wybierany konfiguracją. Praca odbywa się na macOS i Windowsie.
+- Baza danych: SQL Server jest bazą docelową (domyślną), SQLite wariantem (m.in. dla macOS). Aplikacja nie ma domyślnego providera: bez `Database:Provider` (user-secrets lub zmienna środowiskowa `Database__Provider`) start kończy się czytelnym błędem po polsku; SQLite wybiera się jawnie (`Database:Provider` = `Sqlite`, także profil `https-sqlite` w `launchSettings.json`), a SQL Server wymaga dodatkowo `ConnectionStrings:SqlServer`. Ciąg połączenia nigdy nie trafia do repozytorium; `setup.ps1` ustawia go w user-secrets dla instancji SQLEXPRESS. Praca odbywa się na macOS i Windowsie.
 - Mapowanie obiektów: AutoMapper 16.x (wariant Community, użytek edukacyjny; bez klucza licencyjnego w logach pojawia się ostrzeżenie o braku licencji, co jest znane i akceptowane).
-- Testy: xunit.v3, baza SQLite in-memory (osobna dla każdego testu).
+- Testy: xunit.v3, baza SQLite in-memory (osobna dla każdego testu), niezależnie od wyboru providera aplikacji; testy wariantu SQL Server działają osobno (patrz „Środowisko”).
 - Klient: React 19 (Vite), źródła w `WebStore.Web/ClientApp` (szablon `dotnet new react` nie istnieje w .NET 10). Zwykły `dotnet build` i `dotnet test` nie wymagają Node.js; klient budowany jest przez `dotnet publish` (wymaga Node.js) lub ręcznie `npm run build` w `ClientApp` (wynik w `WebStore.Web/wwwroot`), a praca nad nim przez `npm run dev`.
 - Migracje EF: narzędzie `dotnet-ef` jako lokalne (`dotnet-tools.json`, `dotnet tool restore`); osobne migracje w `WebStore.DAL/Migrations/Sqlite` i `/SqlServer`.
 - Wersje pakietów ustala programista poleceniem `dotnet package search` i wybiera aktualne, nieprzestarzałe wydania stabilne.
@@ -62,7 +62,7 @@ Uzgodniony z Liderem na podstawie wymagań sprintu 1:
 - `DELETE` produktu ukrywa go flagą w encji `Product` (migracje dla SQLite i SQL Server); ukryty produkt nie jest zwracany przez `GET` ani przyjmowany w zamówieniu.
 - Proxy deweloperskie klienta dla `/api` i `/swagger`: `server.proxy` w `vite.config.js`.
 - Testy API: integracyjne (`WebApplicationFactory`) w `WebStore.Tests`.
-- Docelowo SQL Server ma zostać bazą podstawową (SQLite jako wariant, m.in. dla macOS); zmiana domyślnego providera nie wchodzi w zakres sprintu 2.
+- Duplikat faktury dla tego samego zamówienia zgłasza `DuplicateInvoiceException` (usługa; także przy naruszeniu unikalnego indeksu w wyścigu), którą kontroler mapuje na 409.
 
 ## Stan projektu i otwarte sprawy
 
@@ -70,12 +70,7 @@ Sprinty 1 i 2 są zamknięte: wszystkie user stories mają status `Zweryfikowana
 
 Otwarte sprawy:
 
-Ustalenia Lidera do podjęcia po wznowieniu prac (do doprecyzowania przed startem; żadne nie jest rozpoczęte):
-
-- Przejście na SQL Server jako bazę domyślną (SQLite pozostaje wariantem, m.in. dla macOS): wymaga ustalenia zachowania bez konfiguracji, źródła ciągu połączenia (bez ciągu w repozytorium) oraz zmian w testach, `setup.ps1` i zapisach o bazie w tym dokumencie.
-- Analiza niestabilnego testu: jednorazowa porażka jednego testu w przebiegu Release z `WEBSTORE_TEST_SQLSERVER` (kolejne przebiegi 311/311); do ustalenia, który test i dlaczego (wielokrotne uruchomienia, zapis nazw niezaliczonych testów).
-- Poprawka obsługi duplikatu faktury: przy równoległych `POST` dla tego samego zamówienia drugie żądanie może zakończyć się odpowiedzią 500 zamiast 409 (wyjątek unikalnego indeksu bazy); Lider zdecydował, że należy to poprawić (wymaga m.in. dedykowanego wyjątku usługi i dostosowania testów sprintu 1).
-- Do ustalenia z prowadzącym: dopuszczalność SQLite jako domyślnej bazy zamiast SQL Server.
+- Do ustalenia z prowadzącym: dopuszczalność SQLite jako jawnie wybieranego wariantu (m.in. dla macOS) obok SQL Server jako bazy domyślnej.
 - Drobne uwagi recenzji sprintu 2 (podwójne logowanie błędu 500, różny czas odpowiedzi logowania dla nieistniejącego loginu, kłódka przy publicznym `Login` w Swagger UI, pełny stack trace przy braku klucza JWT poza Development, zdublowane testy usług) pozostają bez zmian i nie blokują pracy.
 
 ## Środowisko

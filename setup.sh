@@ -116,7 +116,7 @@ step "Docker / SQL Server (opcjonalne)"
 if has docker; then
   ok "Docker: $(docker --version) (opcjonalny; np. do uruchomienia SQL Server na potrzeby testów)"
 else
-  info "Docker nie jest zainstalowany (opcjonalny). Testy SQL Server są pomijane bez zmiennej WEBSTORE_TEST_SQLSERVER; domyślna baza to SQLite."
+  info "Docker nie jest zainstalowany (opcjonalny). Testy SQL Server są pomijane bez zmiennej WEBSTORE_TEST_SQLSERVER."
 fi
 
 step "Restore, build, testy"
@@ -139,6 +139,8 @@ else
     missing "Polecenie zakończyło się błędem: $failed"
   fi
 fi
+
+info "Uruchomienie aplikacji wymaga wyboru bazy (bez Database:Provider start kończy się błędem). Na macOS wybierz SQLite: dotnet user-secrets set Database:Provider Sqlite --project WebStore.Web (albo profil https-sqlite w launchSettings); testy działają bez tego."
 
 printf '\n==================== PODSUMOWANIE ====================\n'
 for item in "${OK_LIST[@]+"${OK_LIST[@]}"}"; do printf '[OK]      %s\n' "$item"; done

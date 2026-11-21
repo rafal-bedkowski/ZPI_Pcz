@@ -17,7 +17,7 @@ Szczegółowe zasady projektu znajdują się w [CLAUDE.md](CLAUDE.md), a opisy r
 
 - **Serwer:** .NET 10 (LTS), C#, ASP.NET Core; wersja SDK przypięta w `global.json`.
 - **Dostęp do danych:** Entity Framework Core 10, AutoMapper 16.
-- **Baza danych:** SQLite (domyślnie, macOS) lub SQL Server (Windows: Express, instancja `SQLEXPRESS`; wybór w konfiguracji, patrz „Baza danych”).
+- **Baza danych:** SQL Server (docelowa; Windows: Express, instancja `SQLEXPRESS`) lub SQLite (wariant, m.in. dla macOS); provider wybiera się jawnie w konfiguracji, patrz „Baza danych”.
 - **Klient:** React 19 + Vite (`WebStore.Web/ClientApp`).
 - **API:** ASP.NET Core Web API, uwierzytelnianie tokenem JWT (Identity), dokumentacja Swagger (Swashbuckle) w środowisku Development.
 - **Testy:** xunit.v3, SQLite in-memory, testy integracyjne API przez `WebApplicationFactory`.
@@ -55,6 +55,8 @@ dotnet test
 dotnet run --project WebStore.Web
 ```
 
+`dotnet build` i `dotnet test` nie wymagają konfiguracji bazy (testy używają SQLite w pamięci). Uruchomienie aplikacji (`dotnet run`) wymaga wyboru bazy w konfiguracji (patrz „Baza danych”); bez ustawienia `Database:Provider` start kończy się czytelnym błędem.
+
 `setup.ps1` buduje i testuje w konfiguracji Release (`dotnet build -c Release`, `dotnet test -c Release`). Na części komputerów z Windows funkcja Smart App Control blokuje ładowanie świeżo zbudowanych bibliotek z konfiguracji Debug (zdarzenie Code Integrity 3077, `FileLoadException`), przez co `dotnet test` w Debug kończy się niepowodzeniem; Release nie jest blokowany. Jeżeli ręczne `dotnet test` kończy się takim błędem, użyj `dotnet test -c Release`. Ustawień zabezpieczeń Windows nie trzeba zmieniać.
 
 Klient React: `npm install` i `npm run dev` w `WebStore.Web/ClientApp` (praca nad klientem) lub `npm run build` (wynik w `WebStore.Web/wwwroot`).
@@ -88,7 +90,7 @@ Tylko w środowisku Development, po zastosowaniu migracji, aplikacja tworzy role
 
 Po `dotnet run --project WebStore.Web` (Development) dokumentacja jest pod adresem `/swagger/index.html` (np. `https://localhost:7192/swagger/index.html`; profil `https` w `launchSettings.json`). Token uzyskujesz z `POST /api/AccountApi/Login` (JSON lub formularz z polami `Login` i `Password`); odpowiedź zawiera `access_token` i `expires_in`. Token podajesz w oknie „Authorize” Swaggera (sam token, bez słowa `Bearer`) albo w nagłówku `Authorization` w Postmanie. `DELETE /api/ProductApi/{id}` ukrywa produkt (flaga w bazie), nie usuwa rekordu.
 
-Po aktualizacji repozytorium zastosuj nową migrację (flaga ukrycia produktu): `dotnet ef database update --context SqliteDbContext --project WebStore.DAL --startup-project WebStore.Web`.
+Po aktualizacji repozytorium zastosuj nową migrację (flaga ukrycia produktu) dla wybranego providera (polecenia w sekcji „Baza danych”).
 
 ### Klient React a API
 
@@ -96,21 +98,21 @@ Serwer deweloperski klienta (`npm run dev`) przekazuje żądania `/api` i `/swag
 
 ## Baza danych
 
-Domyślnym providerem jest SQLite (`Database:Provider` = `Sqlite` w `appsettings.json`). SQL Server włącza się wyłącznie konfiguracją użytkownika poza repozytorium; ciąg połączenia SQL Server ani hasło nie mogą trafić do żadnego pliku repozytorium (ani do `appsettings*.json`, README, skryptów, ani do kodu).
+Docelową bazą jest SQL Server, a SQLite jest wariantem (m.in. dla macOS). Aplikacja nie ma domyślnego providera: bez ustawienia `Database:Provider` start kończy się błędem z opisem, co ustawić. Provider i ciąg połączenia ustawia się wyłącznie poza repozytorium (user-secrets lub zmienne środowiskowe); ciąg połączenia SQL Server ani hasło nie mogą trafić do żadnego pliku repozytorium (ani do `appsettings*.json`, README, skryptów, ani do kodu). Dla `Database:Provider` dopuszczalne wartości to `SqlServer` i `Sqlite`.
 
-### macOS
+### macOS (SQLite)
 
-Używany jest wyłącznie SQLite, bez dodatkowej konfiguracji. Plik bazy `webstore.db` powstaje w katalogu `WebStore.Web` po zastosowaniu migracji: `dotnet ef database update --context SqliteDbContext --project WebStore.DAL --startup-project WebStore.Web`.
+Wybór SQLite: `dotnet user-secrets set "Database:Provider" "Sqlite" --project WebStore.Web` (albo zmienna środowiskowa `Database__Provider=Sqlite`, albo profil `https-sqlite` w `launchSettings.json`, który ustawia ją za Ciebie). Plik bazy `webstore.db` powstaje w katalogu `WebStore.Web` po zastosowaniu migracji: `dotnet ef database update --context SqliteDbContext --project WebStore.DAL --startup-project WebStore.Web`. Skrypt `setup.sh` przypomina o tym kroku po sprawdzeniu narzędzi.
 
 ### Windows: SQL Server Express przez setup.ps1
 
-Jeżeli działa usługa `MSSQL$SQLEXPRESS` (SQL Server Express, instancja `SQLEXPRESS`), `setup.ps1` wykrywa ją i po wykonaniu restore, build i testów pyta `[t/N]` (domyślnie „nie”), czy skonfigurować aplikację do pracy z nią. Po odpowiedzi `t` skrypt ustawia w user-secrets projektu `WebStore.Web` wartości `Database:Provider` = `SqlServer` oraz `ConnectionStrings:SqlServer`. Ciąg połączenia skrypt składa w trakcie działania z nazwy wykrytej instancji (uwierzytelnianie Windows bez loginu i hasła, baza `WebStore`, zaufanie certyfikatowi serwera) i zapisuje go tylko w user-secrets, poza repozytorium. Jeżeli user-secrets zawierają już te wartości, skrypt dodatkowo pyta o ich nadpisanie; odpowiedź inna niż `t` niczego nie zmienia. Z parametrem `-CheckOnly` skrypt tylko informuje o wykryciu instancji. Gdy instancji nie ma, wypisuje, jak ją zainstalować (np. `winget install --id Microsoft.SQLServer.2025.Express -e`, instalator Basic), a aplikacja działa na SQLite.
+Jeżeli działa usługa `MSSQL$SQLEXPRESS` (SQL Server Express, instancja `SQLEXPRESS`), `setup.ps1` wykrywa ją i po wykonaniu restore, build i testów pyta `[t/N]` (domyślnie „nie”), czy skonfigurować aplikację do pracy z nią. Po odpowiedzi `t` skrypt ustawia w user-secrets projektu `WebStore.Web` wartości `Database:Provider` = `SqlServer` oraz `ConnectionStrings:SqlServer`. Ciąg połączenia skrypt składa w trakcie działania z nazwy wykrytej instancji (uwierzytelnianie Windows bez loginu i hasła, baza `WebStore`, zaufanie certyfikatowi serwera) i zapisuje go tylko w user-secrets, poza repozytorium. Jeżeli user-secrets zawierają już te wartości, skrypt dodatkowo pyta o ich nadpisanie; odpowiedź inna niż `t` niczego nie zmienia (aplikacja nie uruchomi się wtedy bez ręcznego ustawienia providera). Z parametrem `-CheckOnly` skrypt tylko informuje o wykryciu instancji. Gdy instancji nie ma, wypisuje, jak ją zainstalować (np. `winget install --id Microsoft.SQLServer.2025.Express -e`, instalator Basic), oraz jak wybrać SQLite.
 
 Po konfiguracji:
 
 - schemat bazy: `dotnet ef database update --context SqlServerDbContext --project WebStore.DAL --startup-project WebStore.Web` (polecenie czyta te same user-secrets),
 - uruchomienie na SQL Server: `dotnet run --project WebStore.Web` (bez dodatkowych zmiennych środowiskowych),
-- powrót do SQLite: `dotnet user-secrets clear --project WebStore.Web`.
+- przejście na SQLite: `dotnet user-secrets set "Database:Provider" "Sqlite" --project WebStore.Web`.
 
 ### Windows: ręczna konfiguracja innej instancji SQL Server
 
@@ -118,4 +120,4 @@ Dla dowolnej innej instancji (inna wersja lub typ, instancja zdalna, w tym z log
 
 ### Testy wariantu SQL Server
 
-Testy wariantu SQL Server (`WebStore.Tests.SqlServerProviderTests`) są pomijane, dopóki zmienna środowiskowa `WEBSTORE_TEST_SQLSERVER` nie zawiera ciągu połączenia do instancji SQL Server. Ustawiamy ją tylko w bieżącej sesji terminala, nie w repozytorium. Dla lokalnej instancji `SQLEXPRESS` ciąg składa się z serwera (`localhost`, backslash i nazwa instancji), uwierzytelniania Windows (zintegrowanego, bez loginu i hasła) oraz zaufania certyfikatowi serwera (lokalna instancja ma certyfikat samopodpisany); nazwa bazy nie jest potrzebna, bo każdy test tworzy i usuwa własną bazę. Następnie `dotnet test` (lub `dotnet test --filter-class WebStore.Tests.SqlServerProviderTests`). Zwykłe `dotnet test` korzysta z SQLite w pamięci niezależnie od user-secrets.
+Testy wariantu SQL Server (`WebStore.Tests.SqlServerProviderTests`) są pomijane, dopóki zmienna środowiskowa `WEBSTORE_TEST_SQLSERVER` nie zawiera ciągu połączenia do instancji SQL Server. Ustawiamy ją tylko w bieżącej sesji terminala, nie w repozytorium. Dla lokalnej instancji `SQLEXPRESS` ciąg składa się z serwera (`localhost`, backslash i nazwa instancji), uwierzytelniania Windows (zintegrowanego, bez loginu i hasła) oraz zaufania certyfikatowi serwera (lokalna instancja ma certyfikat samopodpisany); nazwa bazy nie jest potrzebna, bo każdy test tworzy i usuwa własną bazę. Następnie `dotnet test` (lub `dotnet test --filter-class WebStore.Tests.SqlServerProviderTests`). Zwykłe `dotnet test` korzysta z SQLite w pamięci niezależnie od user-secrets i od wyboru providera aplikacji.

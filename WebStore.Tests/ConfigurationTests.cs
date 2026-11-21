@@ -23,7 +23,7 @@ public class ConfigurationTests
     [Fact]
     public void US_01_01_AllSprintServices_AreRegisteredAndResolvable()
     {
-        using var provider = Register(new()).BuildServiceProvider(validateScopes: true);
+        using var provider = Register(new() { ["Database:Provider"] = "Sqlite" }).BuildServiceProvider(validateScopes: true);
         using var scope = provider.CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IProductService>());
@@ -33,10 +33,24 @@ public class ConfigurationTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IAddressService>());
     }
 
-    [Fact]
-    public void US_01_07_NoProviderConfigured_UsesSqlite()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void NoProviderConfigured_FailsWithClearMessageInsteadOfFallingBackToSqlite(string? provider)
     {
-        using var provider = Register(new()).BuildServiceProvider();
+        var ex = Assert.Throws<InvalidOperationException>(() => Register(new() { ["Database:Provider"] = provider }));
+
+        Assert.Contains("Nie skonfigurowano bazy danych", ex.Message);
+        Assert.Contains("Database:Provider", ex.Message);
+        Assert.Contains("SqlServer", ex.Message);
+        Assert.Contains("Sqlite", ex.Message);
+    }
+
+    [Fact]
+    public void US_01_07_SqliteConfiguredExplicitly_UsesSqlite()
+    {
+        using var provider = Register(new() { ["Database:Provider"] = "Sqlite" }).BuildServiceProvider();
         using var scope = provider.CreateScope();
 
         Assert.True(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.IsSqlite());

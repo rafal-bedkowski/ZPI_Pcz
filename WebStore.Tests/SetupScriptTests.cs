@@ -8,12 +8,14 @@ namespace WebStore.Tests;
 public class SetupScriptTests
 {
     [Fact]
-    public void US_01_07_AppSettings_DefaultProviderIsSqlite()
+    public void AppSettings_DoNotChooseDatabaseProvider()
     {
+        // Brak wyboru w repozytorium: aplikacja bez konfiguracji nie startuje, a provider (SQL Server lub SQLite) ustawia użytkownik.
         using var document = JsonDocument.Parse(File.ReadAllText(
             Path.Combine(RepositoryPaths.Root, "WebStore.Web", "appsettings.json")));
 
-        Assert.Equal("Sqlite", document.RootElement.GetProperty("Database").GetProperty("Provider").GetString());
+        Assert.False(document.RootElement.TryGetProperty("Database", out _));
+        Assert.False(document.RootElement.TryGetProperty("ConnectionStrings", out _));
     }
 
     [Fact]

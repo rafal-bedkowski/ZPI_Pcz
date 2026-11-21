@@ -2,6 +2,8 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WebStore.Services.Configuration;
+using WebStore.Services.ConcreteServices;
+using WebStore.Services.Exceptions;
 using WebStore.Services.Interfaces;
 using WebStore.ViewModels.VM;
 using WebStore.DAL.EF;
@@ -26,7 +28,7 @@ public sealed class SqlServerProviderTests : IDisposable
         {
             InitialCatalog = $"WebStoreTests_{Guid.NewGuid():N}"
         };
-        _db = new SqlServerDbContext(new DbContextOptionsBuilder<SqlServerDbContext>().UseSqlServer(builder.ConnectionString).Options);
+        _db = new SqlServerDbContext(new DbContextOptionsBuilder<SqlServerDbContext>().UseSqlServerForTests(builder.ConnectionString).Options);
         _db.Database.EnsureCreated();
         TestData.Seed(_db);
         return _db;
@@ -121,6 +123,33 @@ public sealed class SqlServerProviderTests : IDisposable
         db.Products.Add(new Product { Name = "X", Description = "X", CategoryId = 99, SupplierId = 1 });
 
         Assert.Throws<DbUpdateException>(() => db.SaveChanges());
+    }
+
+    [Fact]
+    public void SqlServer_InvoiceDuplicateCreatedConcurrently_ThrowsDuplicateInvoiceException()
+    {
+        var db = Open();
+        var order = new Order { CustomerId = TestData.CustomerId, OrderDate = DateTime.Today, DeliveryDate = DateTime.Today };
+        order.OrderProducts.Add(new OrderProduct { ProductId = TestData.MonitorId, Quantity = 1, UnitPrice = 1000m });
+        db.Orders.Add(order);
+        db.SaveChanges();
+        using var provider = BuildServices(db);
+        var competitor = provider.GetRequiredService<IInvoiceService>();
+        AddOrUpdateInvoiceVm Invoice(string number) => new()
+        {
+            InvoiceNumber = number, IssueDate = new DateTime(2025, 1, 10), PaymentDueDate = new DateTime(2025, 1, 24), OrderId = order.Id
+        };
+        var interceptor = new BeforeFirstSaveInterceptor(() => competitor.AddOrUpdateInvoice(Invoice("FV/konkurent")));
+        var options = new DbContextOptionsBuilder<SqlServerDbContext>()
+            .UseSqlServerForTests(db.Database.GetConnectionString()!).AddInterceptors(interceptor).Options;
+        using var racingDb = new SqlServerDbContext(options);
+        var racing = new InvoiceService(racingDb, provider.GetRequiredService<AutoMapper.IMapper>(),
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>().CreateLogger("test"));
+
+        var ex = Assert.Throws<DuplicateInvoiceException>(() => racing.AddOrUpdateInvoice(Invoice("FV/2")));
+
+        Assert.IsType<DbUpdateException>(ex.InnerException);
+        Assert.Equal("FV/konkurent", db.Invoices.AsNoTracking().Single().InvoiceNumber);
     }
 
     public void Dispose() => _db?.Database.EnsureDeleted();

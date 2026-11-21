@@ -23,6 +23,19 @@ public class JwtKeyTests
         Assert.Contains("klucz", exception.Message);
     }
 
+    [Theory]
+    [InlineData("Development")]
+    [InlineData("Production")]
+    public void WithoutDatabaseProvider_StartupFailsWithPolishMessage(string environment)
+    {
+        using var factory = new ApiFactory { EnvironmentName = environment, DatabaseProvider = null };
+
+        var exception = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
+
+        Assert.Contains("Nie skonfigurowano bazy danych", exception.Message);
+        Assert.Contains("Database:Provider", exception.Message);
+    }
+
     [Fact]
     public void OutsideDevelopment_ConfiguredKey_StartsNormally()
     {

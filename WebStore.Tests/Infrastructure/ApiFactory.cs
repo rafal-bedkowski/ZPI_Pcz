@@ -42,6 +42,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public string? ContentRoot { get; init; }
     // Ciąg połączenia z instancją SQL Server (bez nazwy bazy); nazwę bazy nadaje fabryka.
     public string? SqlServerConnectionString { get; init; }
+    // Wartość Database:Provider widziana przez aplikację (testy używają własnej bazy, więc zwykle "Sqlite"); null = brak ustawienia.
+    public string? DatabaseProvider { get; init; } = "Sqlite";
     public string? HttpsPort { get; init; }
     public Action<IServiceCollection>? ConfigureServices { get; init; }
     public CapturingLoggerProvider Logs { get; } = new();
@@ -70,7 +72,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             {
                 InitialCatalog = $"WebStoreApiTests_{Guid.NewGuid():N}"
             }.ConnectionString;
-            useDatabase = o => o.UseSqlServer(_sqlServerDatabaseConnection);
+            useDatabase = o => o.UseSqlServerForTests(_sqlServerDatabaseConnection);
         }
 
         using (var db = new ApplicationDbContext(CreateOptions(useDatabase)))
@@ -80,6 +82,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         }
 
         builder.UseEnvironment(EnvironmentName);
+        // Provider jest odczytywany już przy rejestracji usług w Program.cs, zanim zadziała ConfigureAppConfiguration,
+        // dlatego trafia do ustawień hosta; pusta wartość nadpisuje ewentualne user-secrets programisty.
+        builder.UseSetting("Database:Provider", DatabaseProvider ?? string.Empty);
         if (HttpsPort is not null)
         {
             builder.UseSetting("https_port", HttpsPort);
@@ -89,7 +94,6 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
             new Dictionary<string, string?>
             {
-                ["Database:Provider"] = "Sqlite",
                 ["JwtOptions:Issuer"] = Issuer,
                 ["JwtOptions:Audience"] = Audience,
                 ["JwtOptions:TokenExpirationMinutes"] = "20",
@@ -140,7 +144,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         {
             if (_sqlServerDatabaseConnection is not null)
             {
-                using var db = new ApplicationDbContext(CreateOptions(o => o.UseSqlServer(_sqlServerDatabaseConnection)));
+                using var db = new ApplicationDbContext(CreateOptions(o => o.UseSqlServerForTests(_sqlServerDatabaseConnection)));
                 db.Database.EnsureDeleted();
             }
 

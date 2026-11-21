@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using WebStore.Services.Exceptions;
 using WebStore.Services.Interfaces;
 using WebStore.ViewModels.VM;
 
@@ -40,8 +41,7 @@ public class InvoiceApiController : BaseApiController
         Update(model.Id, id => _service.GetInvoice(e => e.Id == id) is not null,
             () => _service.AddOrUpdateInvoice(model), DuplicateInvoiceToConflict);
 
-    // Usługa zgłasza InvalidOperationException, gdy zamówienie ma już fakturę.
-    private IActionResult? DuplicateInvoiceToConflict(Exception ex) => ex is InvalidOperationException
+    private IActionResult? DuplicateInvoiceToConflict(Exception ex) => ex is DuplicateInvoiceException
         ? Problem(detail: ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Konflikt")
         : null;
 }

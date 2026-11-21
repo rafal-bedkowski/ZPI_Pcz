@@ -15,8 +15,9 @@ public static class DatabaseServiceCollectionExtensions
     public const string DefaultSqliteFile = "webstore.db";
 
     /// <summary>
-    /// Rejestruje <see cref="ApplicationDbContext"/> na providerze wskazanym w konfiguracji (domyślnie SQLite).
-    /// Ciąg połączenia SQL Server pochodzi wyłącznie z user-secrets lub zmiennej środowiskowej.
+    /// Rejestruje <see cref="ApplicationDbContext"/> na providerze wskazanym w konfiguracji. Docelową bazą jest SQL Server;
+    /// SQLite trzeba wybrać jawnie, a brak ustawienia providera przerywa start. Ciąg połączenia SQL Server pochodzi
+    /// wyłącznie z user-secrets lub zmiennej środowiskowej.
     /// </summary>
     public static IServiceCollection AddWebStoreDatabase(
         this IServiceCollection services, IConfiguration configuration, string contentRootPath)
@@ -24,7 +25,12 @@ public static class DatabaseServiceCollectionExtensions
         var provider = configuration[ProviderKey];
         if (string.IsNullOrWhiteSpace(provider))
         {
-            provider = SqliteProvider;
+            throw new InvalidOperationException(
+                $"Nie skonfigurowano bazy danych: brakuje ustawienia '{ProviderKey}'. " +
+                $"Ustaw je na {SqlServerProvider} (SQL Server, razem z ciągiem połączenia 'ConnectionStrings:SqlServer') " +
+                $"albo na {SqliteProvider} (SQLite, np. na macOS) w user-secrets " +
+                $"(dotnet user-secrets set \"{ProviderKey}\" <wartość> --project WebStore.Web) " +
+                $"lub w zmiennej środowiskowej {ProviderKey.Replace(":", "__")}.");
         }
 
         if (string.Equals(provider, SqliteProvider, StringComparison.OrdinalIgnoreCase))

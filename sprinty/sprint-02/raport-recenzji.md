@@ -1,18 +1,20 @@
 # Raport recenzji — Sprint 02
 
-Zakres: stan katalogu roboczego (HEAD = 5226ceb, zmiany niezacommitowane: `WebStore.Tests/Infrastructure/ApiFactory.cs`, `WebStore.Tests/Api/SqlServerApiTests.cs`, `CLAUDE.md`, `raport-implementacji.md`, `user-stories.md`), US-02-01 do US-02-13. Dodatkowo przejrzano zmiany sprintu 1 wprowadzone po recenzji (README, setup.ps1, testy w `UnitTests/`, klient React) — są już w historii git i nie wykazują regresji ani artefaktów.
+Zakres: stan katalogu roboczego względem HEAD = 8e2dc1a (poprawki po sprincie A, B, C opisane w `raport-implementacji.md`, sekcja 7; bez nowych user stories, oceniane względem ustaleń Lidera, jakości, bezpieczeństwa i czystości kodu) oraz US-02-01 do US-02-13.
 
 ## 1. Werdykt ogólny
 
 **Zaakceptowano z uwagami.** Brak uwag krytycznych. Wszystkie kryteria akceptacji są spełnione. Kryteria zależne od SQL Server (US-02-02 pkt 8, US-02-06 pkt 10) są zweryfikowane na lokalnym SQL Server Express.
 
-Uruchomienia (311 testów w każdej konfiguracji):
-- `dotnet test -c Release` bez `WEBSTORE_TEST_SQLSERVER`: powodzenie 304, niepowodzenie 0, pominięte 7 (testy SQL Server).
-- `dotnet test -c Release` z `WEBSTORE_TEST_SQLSERVER` wskazującą lokalny SQL Server Express (uwierzytelnianie Windows, zmienna ustawiona tylko na czas procesu): trzy z czterech przebiegów 311/311; w jednym przebiegu 1 niepowodzenie, którego nie zidentyfikowano (wynik wypisano tylko w podsumowaniu), niepowtarzalne w kolejnych trzech przebiegach (uwaga 8).
-- `dotnet test` (Debug) z `WEBSTORE_TEST_SQLSERVER` jak wyżej: powodzenie 311, niepowodzenie 0, pominięte 0.
+Uruchomienia (318 testów w każdej konfiguracji):
+- `dotnet build -c Release`: 0 ostrzeżeń, 0 błędów.
+- `dotnet test -c Release` bez `WEBSTORE_TEST_SQLSERVER`: powodzenie 310, niepowodzenie 0, pominięte 8 (testy SQL Server), 25 s.
+- `dotnet test -c Release` z `WEBSTORE_TEST_SQLSERVER=Server=localhost\SQLEXPRESS;Integrated Security=true;TrustServerCertificate=true;` (ustawioną tylko na czas procesu): powodzenie 318, niepowodzenie 0, pominięte 0, 31 s.
 - Ręcznie: start w środowisku Production bez `JwtOptions:SecretKey` kończy się `OptionsValidationException` z polskim komunikatem wskazującym `JwtOptions:SecretKey` (US-02-02 pkt 6); start w Development bez hasła kont testowych loguje polskie ostrzeżenie i nie przerywa startu (US-02-03 pkt 3).
 
-Podsumowanie kryteriów: 13 US, 0 odrzuconych; kryteria: Spełnione — wszystkie; Niespełnione 0, Nie da się zweryfikować 0 oraz US-02-12 pkt 1–4 zweryfikowane tylko przeglądem konfiguracji (patrz tabela).
+Podsumowanie kryteriów: 13 US, 0 odrzuconych; kryteria: Spełnione — wszystkie; Niespełnione 0, Nie da się zweryfikować 0 (US-02-12 pkt 1–4 zweryfikowane tylko przeglądem konfiguracji, patrz tabela).
+
+Poprawki po sprincie: A (409 dla duplikatu faktury) i B (SQL Server jako baza domyślna) zgodne z ustaleniami Lidera; C (limit 120 s) działa, ale nie eliminuje znanego ograniczenia środowiska (uwaga 3).
 
 ## 2. Weryfikacja kryteriów
 
@@ -103,8 +105,7 @@ Dowody: klasy testów w `WebStore.Tests` (wszystkie przechodzą), pliki w `WebSt
 Brak.
 
 ### Istotne
-
-1. **`WebStore.Web/Controllers/InvoiceApiController.cs:41-43` — zbyt szerokie mapowanie na 409 (zaakceptowane przez Lidera ograniczenie).** `DuplicateInvoiceToConflict` zamienia każdy `InvalidOperationException` na 409 z oryginalnym komunikatem. Scenariusz: inny `InvalidOperationException` (np. z EF lub z przyszłej zmiany w `InvoiceService`) zostaje błędnie zwrócony jako konflikt z komunikatem wewnętrznym. Dodatkowo równoległe dwa `POST` dla tego samego zamówienia mogą obaj przejść sprawdzenie `Any` w `InvoiceService.cs:42` i drugi dostanie `DbUpdateException` z unikalnego indeksu, czyli 500 zamiast 409. Kierunek: dedykowany typ wyjątku usługi dla „zamówienie ma już fakturę” (lub mapowanie naruszenia unikalności indeksu na ten sam wyjątek) i jego obsługa w kontrolerze. Zmiana typu wyjątku dotyka testów sprintu 1, które sprawdzają dokładny typ, więc wymagałaby decyzji Lidera. Lider zdecydował: pozostaje obecne rozwiązanie.
+Brak. Poprawka A (duplikat faktury): `DuplicateInvoiceException` (`WebStore.Services/Exceptions/DuplicateInvoiceException.cs`) jest rzucany przez `InvoiceService.cs:37` i `:58-62` (także po `DbUpdateException`, gdy inna faktura zamówienia istnieje; diagnoza niezależna od providera, inne błędy lecą dalej jako 500), a `InvoiceApiController.cs:44` mapuje wyłącznie ten typ na 409. Deterministyczne testy wyścigu: `InvoiceServiceTests.AddOrUpdateInvoice_DuplicateCreatedConcurrently_ThrowsDuplicateInvoiceException` (SQLite) i `SqlServerProviderTests.SqlServer_InvoiceDuplicateCreatedConcurrently_ThrowsDuplicateInvoiceException` (SQL Server) — zielone.
 
 ### Drobne
 
@@ -119,13 +120,18 @@ Brak.
 rm -f "/private/tmp/claude-501/-Users-rafalbedkowski-uczelnia-ZIP-ZPI-Pcz/fbc64f64-2ece-48ad-9ae0-f8849ff51e86/scratchpad/"{api.log,pw.txt,smoke.db,vite.log}
 ```
 
-8. **Jednorazowa niestabilność testów w Release z SQL Server.** W jednym z czterech przebiegów 1 test zakończył się niepowodzeniem (nieustalony), w trzech kolejnych przebiegach 311/311. Scenariusz: sporadyczna awaria zależna od czasu lub współdzielonej instancji SQL Server Express. Kierunek: przy ponownym wystąpieniu zapisać nazwę testu i komunikat.
+8. **Test API na prawdziwą równoległość `POST` faktury nie istnieje.** Mapowanie wyścigu na 409 jest pokryte testem usługi (z przechwytywaczem) i testem 409 dla sekwencyjnego duplikatu, ale nie jednym testem end-to-end. Świadoma decyzja programisty (test byłby niedeterministyczny); odnotowane informacyjnie.
+
+### Uwaga środowiskowa (nie defekt)
+
+9. **Niestabilność testów na lokalnym SQL Server Express (zaakceptowane przez Lidera).** `CREATE DATABASE` na instancji SQLEXPRESS bywa chwilowo bardzo wolny (przebiegi od ok. 8 s do 3,5 min), co jednorazowo powodowało porażkę losowego testu (np. `SqlServerProviderTests.US_01_10_SqlServer_TotalAmountIsExactAfterRoundTrip`, wyjątek w `SqlCommand.RunExecuteNonQueryTds`). Przyczyny nie ustalono i nie ma dowodu, że leży w kodzie testów. Limit 120 s (`WebStore.Tests/Infrastructure/SqlServerTestOptions.cs`, użyty w `SqlServerProviderTests` i `ApiFactory`) łagodzi problem, lecz przy spowolnieniach dłuższych niż 120 s porażka może wystąpić. W tej recenzji przebieg z SQL Server: 318/318 w 31 s. Pozostałość `WebStoreTests_d8f23dec9f52467a8c7eea361dfb2910` w SQLEXPRESS zostawiona zgodnie z poleceniem.
 
 ### Artefakty redakcyjne, sekrety, zakres
 
-- Brak `TODO`/`FIXME`/`XXX`/`TBD`, logów debugowych, zakomentowanego i martwego kodu, plików `*.bak`/`tmp`, komentarzy o historii zmian (przeszukano `.cs`, `.js`, `.jsx`, `.json`, `.md`, `.sh`, `.ps1`, `.csproj`, `.html`).
+- Brak `TODO`/`FIXME`/`XXX`/`TBD` (poza opisami zasad w CLAUDE.md i definicjach agentów), logów debugowych, zakomentowanego i martwego kodu, plików `*.bak`/`tmp`, komentarzy o historii zmian (przeszukano `.cs`, `.js`, `.jsx`, `.json`, `.md`, `.sh`, `.ps1`, `.csproj`, `.html`).
 - Testy SQL Server: `ApiFactory` tworzy osobną bazę `WebStoreApiTests_<guid>` i usuwa ją w `Dispose`; ciąg połączenia pochodzi wyłącznie ze zmiennej środowiskowej. W repozytorium brak ciągów połączenia i haseł (wystąpienia `SQLEXPRESS` to opisy w README oraz dane wejściowe testu `ArchitectureTests`). `CLAUDE.md`, `user-stories.md` i `raport-implementacji.md` opisują stan bieżący, bez śladów historii.
 - Brak sekretów: `appsettings*.json` bez `SecretKey`, ciągu połączenia i haseł; hasło kont i klucz tylko z konfiguracji; w testach losowe. `webstore.db` i `wwwroot` są ignorowane przez git; w śledzonych plikach brak `*.db` i `TestResults`.
+- Poprawka B: `DatabaseServiceCollectionExtensions.cs:25-33` bez domyślnego providera (komunikat po polsku); `appsettings.json` bez sekcji `Database` i ciągów połączenia; profil `https-sqlite` bez sekretów; `setup.ps1` i `setup.sh` spójne z README i CLAUDE.md (wszystkie komunikaty wskazują jawny wybór SQLite lub SQL Server; testy i build po `git clone` działają bez konfiguracji bazy, bo używają SQLite in-memory). W repozytorium brak ciągów połączenia i haseł. `CLAUDE.md` (stos, Web API, stan i otwarte sprawy) spójny z kodem.
 - `CLAUDE.md`: usunięto sekcję „Stan prac w sprincie 2” (nieaktualna po implementacji), schemat zależności zawiera Tests→Web; zgodne z `ArchitectureTests`.
 - Zależności Web↔Tests: tylko Tests→Web, nic nie referuje Web ani Tests (test architektury).
 - Role nie ograniczają dostępu: `[Authorize]` bez ról na kontrolerze bazowym, `[AllowAnonymous]` tylko na `Login`.

@@ -7,7 +7,8 @@ Sprawdza Git, .NET SDK zgodny z global.json oraz opcjonalnie Node.js i Docker.
 Brakujące .NET SDK i Node.js instaluje przez winget wyłącznie po zgodzie użytkownika.
 Następnie wykonuje dotnet tool restore, restore, build i test.
 Jeżeli działa usługa MSSQL$SQLEXPRESS, po zgodzie użytkownika ustawia user-secrets projektu WebStore.Web
-(Database:Provider i ConnectionStrings:SqlServer), aby aplikacja używała SQL Server zamiast SQLite.
+(Database:Provider i ConnectionStrings:SqlServer). SQL Server jest docelową bazą, ale aplikacja bez ustawienia
+Database:Provider nie uruchomi się; SQLite trzeba wybrać jawnie (dotnet user-secrets set Database:Provider Sqlite).
 
 .PARAMETER CheckOnly
 Tylko sprawdza narzędzia; niczego nie instaluje, o nic nie pyta, nie ustawia user-secrets
@@ -119,7 +120,7 @@ Write-Step 'Docker / SQL Server (opcjonalne)'
 if (Test-Command 'docker') {
     $ok.Add("Docker: $(& docker --version) (opcjonalny; np. do uruchomienia SQL Server na potrzeby testów)")
 } else {
-    $info.Add('Docker nie jest zainstalowany (opcjonalny). Testy SQL Server są pomijane bez zmiennej WEBSTORE_TEST_SQLSERVER; domyślna baza to SQLite.')
+    $info.Add('Docker nie jest zainstalowany (opcjonalny). Testy SQL Server są pomijane bez zmiennej WEBSTORE_TEST_SQLSERVER.')
 }
 
 Write-Step 'Restore, build, testy'
@@ -148,9 +149,9 @@ if ($CheckOnly) {
 Write-Step 'SQL Server Express (opcjonalny)'
 $sqlService = Get-Service -Name 'MSSQL$SQLEXPRESS' -ErrorAction SilentlyContinue
 if (-not $sqlService) {
-    $info.Add('SQL Server Express (instancja SQLEXPRESS) nie jest zainstalowany. Instalacja: winget install --id Microsoft.SQLServer.2025.Express -e (instalator Basic) lub strona https://www.microsoft.com/sql-server/sql-server-downloads. Bez niego aplikacja działa na SQLite.')
+    $info.Add('SQL Server Express (instancja SQLEXPRESS) nie jest zainstalowany. Instalacja: winget install --id Microsoft.SQLServer.2025.Express -e (instalator Basic) lub strona https://www.microsoft.com/sql-server/sql-server-downloads. Bez niego użyj innej instancji SQL Server albo wybierz SQLite: dotnet user-secrets set Database:Provider Sqlite --project WebStore.Web.')
 } elseif ($sqlService.Status -ne 'Running') {
-    $info.Add('Usługa SQL Server Express (MSSQL$SQLEXPRESS) jest zainstalowana, ale nie działa. Uruchom ją, aby skonfigurować SQL Server; do tego czasu aplikacja działa na SQLite.')
+    $info.Add('Usługa SQL Server Express (MSSQL$SQLEXPRESS) jest zainstalowana, ale nie działa. Uruchom ją, aby skonfigurować SQL Server (albo wybierz SQLite: dotnet user-secrets set Database:Provider Sqlite --project WebStore.Web).')
 } elseif ($CheckOnly) {
     $ok.Add('SQL Server Express: wykryto działającą instancję SQLEXPRESS (tryb -CheckOnly: konfiguracja pominięta)')
 } elseif (-not (Test-DotnetSdk)) {
@@ -161,7 +162,7 @@ if (-not $sqlService) {
     $connectionKey = 'ConnectionStrings:SqlServer'
     $question = 'Wykryto SQL Server Express (SQLEXPRESS). Skonfigurować aplikację do pracy z nim (user-secrets projektu WebStore.Web; nic nie trafia do repozytorium)?'
     if (-not (Confirm-Action $question)) {
-        $info.Add('SQL Server nie został skonfigurowany: user-secrets bez zmian, aplikacja działa na SQLite.')
+        $info.Add('SQL Server nie został skonfigurowany: user-secrets bez zmian, więc aplikacja nie uruchomi się bez ustawienia Database:Provider (SQL Server z ConnectionStrings:SqlServer albo SQLite: dotnet user-secrets set Database:Provider Sqlite --project WebStore.Web).')
     } else {
         # Wartości sekretów nie są wypisywane; sprawdzane są tylko nazwy kluczy.
         $existing = @(& dotnet user-secrets list --project $webProject)
@@ -191,7 +192,7 @@ if (-not $sqlService) {
                     $missing.Add('SQL Server: nie udało się zapisać user-secrets projektu WebStore.Web')
                 } else {
                     $ok.Add("SQL Server: user-secrets projektu WebStore.Web ustawione dla instancji $instance (Database:Provider, ConnectionStrings:SqlServer)")
-                    $info.Add('Schemat bazy utworzysz poleceniem: dotnet ef database update --context SqlServerDbContext --project WebStore.DAL --startup-project WebStore.Web. Powrót do SQLite: dotnet user-secrets clear --project WebStore.Web.')
+                    $info.Add('Schemat bazy utworzysz poleceniem: dotnet ef database update --context SqlServerDbContext --project WebStore.DAL --startup-project WebStore.Web. Przejście na SQLite: dotnet user-secrets set Database:Provider Sqlite --project WebStore.Web.')
                 }
             }
         }

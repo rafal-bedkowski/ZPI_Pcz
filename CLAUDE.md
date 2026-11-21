@@ -71,6 +71,9 @@ Sprinty 1 i 2 są zamknięte: wszystkie user stories mają status `Zweryfikowana
 Otwarte sprawy:
 
 - Do ustalenia z prowadzącym: dopuszczalność SQLite jako jawnie wybieranego wariantu (m.in. dla macOS) obok SQL Server jako bazy domyślnej.
+- Znane ograniczenie środowiska: na lokalnej instancji `SQLEXPRESS` tworzenie bazy testowej (`CREATE DATABASE`) bywa chwilowo bardzo wolne (od ok. 8 s do ponad 3 min), przez co testy SQL Server mogą jednorazowo przekroczyć limit czasu (testy używają limitu 120 s). Przyczyny nie ustalono i nie ma dowodu na błąd w kodzie; pojedyncza porażka takiego testu wymaga ponownego uruchomienia i zapisania nazwy testu oraz pełnego komunikatu, zanim zostanie uznana za defekt.
+- Na Windowsie Smart App Control blokuje ładowanie niepodpisanych bibliotek budowanych lokalnie (`WebStore.Web.dll`, `WebStore.Tests.dll`; błąd `0x800711C7`), co uniemożliwia uruchomienie testów. Lider wyłączył go na swoim komputerze; ustawień zabezpieczeń Windows agenci nie zmieniają.
+- W instancji `SQLEXPRESS` Lidera pozostała jedna baza testowa `WebStoreTests_d8f23dec9f52467a8c7eea361dfb2910` po przerwanym przebiegu testów; jest nieszkodliwa i nie jest usuwana przez agentów bez zgody Lidera.
 - Drobne uwagi recenzji sprintu 2 (podwójne logowanie błędu 500, różny czas odpowiedzi logowania dla nieistniejącego loginu, kłódka przy publicznym `Login` w Swagger UI, pełny stack trace przy braku klucza JWT poza Development, zdublowane testy usług) pozostają bez zmian i nie blokują pracy.
 
 ## Środowisko
